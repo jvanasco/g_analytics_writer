@@ -1,0 +1,3 @@
+0.0.5
+	initial import
+	consolidated pyramid_gaq and pylons_gaq into gaq_helper

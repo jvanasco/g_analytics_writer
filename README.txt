@@ -70,8 +70,6 @@ the pyramid helpers simply manage a GaqHub object in the request._gaq namespace 
            request= get_current_request()
         request._gaq= GaqHub( account_id , single_push=single_push )
 
-
-
 ## import this into your helpers
 
 Dropping it into your helpers namespace makes it easier to use in templates like mako.
@@ -95,6 +93,21 @@ handlers/base.py
         def __init__(self, request):
         self.request = request
         h.gaq_setup('GA_ACCOUNT_ID',single_push=False, request=self.request )
+
+
+if you want to get all fancy...
+        h.gaq_setup( request.registry.settings['gaq.account'] , request=self.request )
+
+this way you can have different reporting environments...
+
+    dev.ini
+        gaq.account = U-123449-2
+    
+    production.ini
+        gaq.account = U-123449-1
+
+
+
         
 
 

@@ -6,6 +6,11 @@ def gaq_setup( account_id , single_push=False , request=None ):
        request= get_current_request()
     request._gaq= GaqHub( account_id , single_push=single_push )
 
+def gaq_setAccount(account_id,request=None):
+    if request is None:
+       request= get_current_request()
+    request._gaq.gaq_setAccount( account_id )
+
 def gaq_setSinglePush(bool_value,request=None):
     if request is None:
        request= get_current_request()
@@ -49,4 +54,4 @@ def gaq_trackTrans(request=None):
 def gaq_as_html(request=None):
     if request is None:
        request= get_current_request()
-    request._gaq.as_html()
+    return request._gaq.as_html()

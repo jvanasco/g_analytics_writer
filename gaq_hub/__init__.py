@@ -1,3 +1,4 @@
+import types
 
 class GaqHub(object):
     data_struct= None
@@ -34,10 +35,17 @@ class GaqHub(object):
             '_trackTrans' : False,
     
             '_trackEvent' :[],
+
         }
     
     
         
+
+    def setAccount(self,account_id):
+        """This should really never be called, best to setup during __init__, where it is required"""
+        self.data_struct['_setAccount']= account_id
+
+
 
     def setSinglePush(self,bool_value):
         """GA supports a single 'push' event.  """
@@ -129,7 +137,8 @@ class GaqHub(object):
         --from http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEcommerce.html#_gat.GA_Tracker_._trackTrans
         """
         self.data_struct['_trackTrans']= True
-        
+
+
         
     def as_html(self):
         """helper function. prints out GA code for you, in the right order.

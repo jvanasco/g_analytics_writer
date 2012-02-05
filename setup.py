@@ -9,12 +9,10 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, "README.txt")).read()
 README = README.split("\n\n", 1)[0] + "\n"
 
-requires = [
-    "pylons", 
-    ]
+requires = []
 
 setup(name="gaq_hub",
-      version="0.0.5",
+      version="0.0.6",
       description="Lightweight Google Analytics support",
       long_description=README,
       classifiers=[

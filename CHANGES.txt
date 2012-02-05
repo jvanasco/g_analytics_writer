@@ -1,3 +1,9 @@
+0.0.6
+	bugfixing against pyramid
+	added gaq_setAccount and instance.setAccount methods, which should never be called
+	removed pylons as a dependency
+	
 0.0.5
 	initial import
 	consolidated pyramid_gaq and pylons_gaq into gaq_helper
+	renamed gaq_print() to instance.as_html() and helpers of gaq_as_html()

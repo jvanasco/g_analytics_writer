@@ -1,3 +1,9 @@
+0.0.7
+	added test coverage
+	gaq_setup now returns the proxied GaqHub object
+	fixed errors in helper functions
+	
+
 0.0.6
 	bugfixing against pyramid
 	added gaq_setAccount and instance.setAccount methods, which should never be called

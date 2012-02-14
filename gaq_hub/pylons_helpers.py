@@ -3,12 +3,13 @@ from pylons import c
 
 def gaq_setup( account_id , single_push=False ):
     c._gaq= GaqHub( account_id , single_push=single_push )
+    return c.gaq
 
 def gaq_setAccount(account_id):
     c._gaq.setAccount( account_id )
 
 def gaq_setSinglePush(bool_value):
-    c._gaq.setSinglePus( bool_value )
+    c._gaq.setSinglePush( bool_value )
 
 def gaq_trackEvent(track_dict):
     c._gaq.trackEvent(track_dict)

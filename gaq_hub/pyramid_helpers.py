@@ -5,16 +5,17 @@ def gaq_setup( account_id , single_push=False , request=None ):
     if request is None:
        request= get_current_request()
     request._gaq= GaqHub( account_id , single_push=single_push )
+    return request._gaq
 
 def gaq_setAccount(account_id,request=None):
     if request is None:
        request= get_current_request()
-    request._gaq.gaq_setAccount( account_id )
+    request._gaq.setAccount( account_id )
 
 def gaq_setSinglePush(bool_value,request=None):
     if request is None:
        request= get_current_request()
-    request._gaq.setSinglePus( bool_value )
+    request._gaq.setSinglePush( bool_value )
 
 def gaq_trackEvent(track_dict,request=None):
     if request is None:

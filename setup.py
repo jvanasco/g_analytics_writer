@@ -12,7 +12,7 @@ README = README.split("\n\n", 1)[0] + "\n"
 requires = []
 
 setup(name="gaq_hub",
-      version="0.0.6",
+      version="0.0.7",
       description="Lightweight Google Analytics support",
       long_description=README,
       classifiers=[
@@ -32,5 +32,6 @@ setup(name="gaq_hub",
       zip_safe=False,
       tests_require = requires,
       install_requires = requires,
+      test_suite="tests",
       )
 

@@ -1,5 +1,8 @@
 import types
 
+def escape_text( text ):
+    return text.replace("\'","\\'")
+
 class GaqHub(object):
     data_struct= None
 
@@ -22,10 +25,11 @@ class GaqHub(object):
         """
         self.data_struct= {
             '__singlePush' : single_push,
+            '__setAccountAdditional': set({}),
     
             '_setAccount' : account_id,
     
-            '_setCustomVar' : [],
+            '_setCustomVar' : dict((i,None) for i in range(1,6)) ,
     
             '_setDomainName': False,
             '_setAllowLinker': False,
@@ -44,6 +48,19 @@ class GaqHub(object):
     def setAccount(self,account_id):
         """This should really never be called, best to setup during __init__, where it is required"""
         self.data_struct['_setAccount']= account_id
+        
+
+    def setAccountAdditional_add( self, account_id ):
+        """add an additional account id to send the data to.  please note - this is only tested to work with the async method.
+        """
+        self.data_struct['__setAccountAdditional'].add( account_id )
+
+    def setAccountAdditional_del( self, account_id ):
+        try:
+            self.data_struct['__setAccountAdditional'].remove( account_id )
+        except KeyError:
+            pass
+        
 
 
 
@@ -76,10 +93,7 @@ class GaqHub(object):
     
         -- from http://code.google.com/apis/analytics/docs/gaJS/gaJSApiBasicConfiguration.html#_gat.GA_Tracker_._setCustomVar
         """
-        if opt_scope :
-            self.data_struct['_setCustomVar'].append( "['_setCustomVar',%s,'%s','%s',%s]" % (index,name,value,opt_scope) )
-        else:
-            self.data_struct['_setCustomVar'].append( "['_setCustomVar',%s,'%s','%s']" % (index,name,value) )
+        self.data_struct['_setCustomVar'][index] = ( escape_text(name) , escape_text(value) , opt_scope )
     
     
     
@@ -139,25 +153,7 @@ class GaqHub(object):
         self.data_struct['_trackTrans']= True
 
 
-        
-    def as_html(self):
-        """helper function. prints out GA code for you, in the right order.
-    
-        You'd probably call it like this in a Mako template: 
-            <head>
-                ${h.as_html()|n}
-            </head>
-        
-        Notice that you have to escape under Mako.   For more information on mako escape options - http://www.makotemplates.org/docs/filtering.html
-        """
-        single_push = self.data_struct['__singlePush']
-        single_pushes= []
-    
-        script= [\
-                    '<script type="text/javascript">',
-                    'var _gaq = _gaq || [];',
-                ]
-        
+    def _inner_render( self , single_push , single_pushes , script , account_id , is_secondary_account=False ):
         # start the single push if we elected
         if single_push:
             script.append( """_gaq.push(""" )
@@ -172,9 +168,9 @@ class GaqHub(object):
     
         # _setAccount
         if single_push:
-            single_pushes.append( """['_setAccount', '%s']""" % self.data_struct['_setAccount'] )
+            single_pushes.append( """['_setAccount', '%s']""" % account_id )
         else: 
-            script.append( """_gaq.push(['_setAccount', '%s']);""" % self.data_struct['_setAccount'] )
+            script.append( """_gaq.push(['_setAccount', '%s']);""" % account_id )
             
         # _setDomainName
         if self.data_struct['_setDomainName']:
@@ -191,14 +187,20 @@ class GaqHub(object):
                 script.append( """_gaq.push(['_setAllowLinker', %s]);""" % ( "%s" % self.data_struct['_setAllowLinker'] ).lower() )
     
         # _setCustomVar is next 
-        # this is done in an array, because there might be some other commands that could fit in here
-        for category in ['_setCustomVar']:
-            for i in self.data_struct[category]:
-                if single_push:
-                    single_pushes.append(i)
-                else:
-                    script.append("""_gaq.push(%s);""" % i )
-    
+        for index in self.data_struct['_setCustomVar'].keys():
+            _payload = self.data_struct['_setCustomVar'][index]
+            if not _payload : continue
+            _payload = (index,) + _payload
+            if _payload[3]:
+                formatted = "['_setCustomVar',%s,'%s','%s',%s]" % _payload
+            else:
+                formatted = "['_setCustomVar',%s,'%s','%s']" % _payload[:3]
+            if single_push:
+                single_pushes.append(formatted)
+            else:
+                script.append("""_gaq.push(%s);""" % formatted )
+
+
         if single_push:
             single_pushes.append("""['_trackPageview']""" )
         else:
@@ -229,6 +231,31 @@ class GaqHub(object):
                     single_pushes.append(i)
                 else:
                     script.append("""_gaq.push(%s);""" % i )
+        return single_pushes , script
+
+        
+    def as_html(self):
+        """helper function. prints out GA code for you, in the right order.
+    
+        You'd probably call it like this in a Mako template: 
+            <head>
+                ${h.as_html()|n}
+            </head>
+        
+        Notice that you have to escape under Mako.   For more information on mako escape options - http://www.makotemplates.org/docs/filtering.html
+        """
+        single_push = self.data_struct['__singlePush']
+        single_pushes= []
+    
+        script= [\
+                    '<script type="text/javascript">',
+                    'var _gaq = _gaq || [];',
+                ]
+                
+        ( single_pushes , script ) = self._inner_render( single_push , single_pushes , script , self.data_struct['_setAccount'] , is_secondary_account=False )
+        for account_id in self.data_struct['__setAccountAdditional'] :
+            ( single_pushes , script ) = self._inner_render( single_push , single_pushes , script , account_id , is_secondary_account=True )
+
     
         # close the single push if we elected
         if single_push:

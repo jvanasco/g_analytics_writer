@@ -1,6 +1,7 @@
 import types
 
-def escape_text( text ):
+def escape_text( text='' ):
+    text= str(text)
     return text.replace("\'","\\'")
 
 class GaqHub(object):

@@ -16,7 +16,7 @@ except:
 requires = []
 
 setup(name="gaq_hub",
-      version="0.0.11",
+      version="0.0.12",
       description="Lightweight Google Analytics support",
       long_description=README,
       classifiers=[

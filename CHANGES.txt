@@ -1,3 +1,7 @@
+0.0.13
+	using and returning explicit unicode strings
+	flake8
+
 0.0.12
 	cast escape_text into string
 

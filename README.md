@@ -8,16 +8,16 @@ GaqHub objects simply contain various bits of data, and then print them out in t
 
 For Pylons:
     creates and manages an _gaq namespace under pylons.c
-    
+
 For Pyramid:
     creates and manages an _gaq namespace under a request instance.  if no request instance is passed via a kward, get_current_request() is called
 
-if you're just using `_trackPageview` from gaq, this package is likely overkill 
+if you're just using `_trackPageview` from gaq, this package is likely overkill
 
 but if you're using any of this functionality, then its for you:
-- custom variables for performance analytics 
-- event tracking for backend interaction / operations 
-- ecommerce tracking 
+- custom variables for performance analytics
+- event tracking for backend interaction / operations
+- ecommerce tracking
 - rolling up multiple domains into 1 reporting suite
 
 This package lets you set GA code wherever needed, and renders everything in the 'correct' order.
@@ -43,17 +43,17 @@ Every command has extensive docstrings, which also include, credit, and link to 
 * _trackEvent
 
 # History
-this pacakge replaces the following two packages, 
+this pacakge replaces the following two packages,
     pylons_gaq  - https://github.com/jvanasco/pylons_gaq
     pyramid_gaq - https://github.com/jvanasco/pyramid_gaq
 
 
-# QuickStart 
+# QuickStart
 
 ## create a new GaqHub object and do stuff with it
 
     from gaq_hub import GaqHub
-    
+
     gaq= GaqHub( 'GA_ACCOUNT_ID' )
     gaq.setCustomVar(1,'TemplateVersion','A',3)
     print gaq.as_html()
@@ -63,66 +63,42 @@ that's really about it
 
 # QuickStart - Pyramid
 
-the pyramid helpers simply manage a GaqHub object in the request._gaq namespace , and uses a call to get_current_request if no kwarg for 'request' is provided :
+the pyramid helpers simply manage a GaqHub object in the request.gaq namespace
 
-    def gaq_setup( account_id , single_push=False , request=None ):
-        if request is None:
-           request= get_current_request()
-        request._gaq= GaqHub( account_id , single_push=single_push )
+	environment.ini
 
-## import this into your helpers
-
-Dropping it into your helpers namespace makes it easier to use in templates like mako.
-
-lib/helpers.py
-
-    from gaq_hub.pyramid_helpers import *
-    
-## configure your BaseController to call gaq_setup on __init__
-
-This example is from my "pylons style hander".
-
-There are only two vars to submit:
-
-1. Your Google Analytics Account ID
-2. Whether or not your want to use the "Single Push" method, or a bunch of separate events.
-
-handlers/base.py
-
-    class Handler(object):
-        def __init__(self, request):
-        self.request = request
-        h.gaq_setup('GA_ACCOUNT_ID',single_push=False, request=self.request )
+		gaq.account_id= UA-123412341234-1234
 
 
-if you want to get all fancy...
-        h.gaq_setup( request.registry.settings['gaq.account'] , request=self.request )
+	this way you can have different reporting environments...
 
-this way you can have different reporting environments...
+		dev.ini
+			gaq.account = U-123449-2
 
-    dev.ini
-        gaq.account = U-123449-2
-    
-    production.ini
-        gaq.account = U-123449-1
+		production.ini
+			gaq.account = U-123449-1
 
 
+	__init__.py:
 
-        
+		def main(global_config, **settings):
+			...
+			# custom gaq
+			config.include("gaq_hub.pyramid_helpers")
 
 
 ## When you want to set a custom variable , or anything similar...
 
-    h.gaq_setCustomVar(1,'TemplateVersion','A',3)
+    request.gaq.setCustomVar(1, 'TemplateVersion', 'A', 3)
 
-    
+
 ## To print this out..
 
 In my mako templates, I just have this...
 
     <head>
     ...
-    ${h.gaq_print()|n}
+    ${request.gaq.as_html()|n}
     ...
     </head>
 
@@ -138,7 +114,7 @@ Dropping it into your helpers namespace makes it easier to use in templates like
 lib/helpers.py
 
     from gaq_hub.pylons_helpers import *
-    
+
 
 ## configure your BaseController to call gaq_setup on __init__
 
@@ -154,14 +130,14 @@ handlers/base.py
     class Handler(object):
         def __init__(self, request):
         self.request = request
-        h.gaq_setup(request,'GA_ACCOUNT_ID',single_push=False)
+        h.gaq_setup(request, 'GA_ACCOUNT_ID', single_push=False)
 
 
 ## When you want to set a custom variable , or anything similar...
 
-    h.gaq_setCustomVar(1,'TemplateVersion','A',3)
+    h.gaq_setCustomVar(1, 'TemplateVersion', 'A', 3)
 
-    
+
 ## To print this out..
 
 In my mako templates, I just have this...

@@ -2,6 +2,31 @@ from . import GaqHub
 from pyramid.threadlocal import get_current_request
 
 
+def includeme(config):
+    """the pyramid includeme command
+    including this will automatically setup the GaqHub object for every request
+    """
+    config.add_request_method(
+        'gaq_hub.pyramid_helpers.new_GaqHub',
+        'gaq',
+        reify=True,
+    )
+
+
+def new_GaqHub(request):
+    """simply creates a new hub"""
+    account_id = request.registry.settings['gaq.account_id']
+    return GaqHub(account_id, single_push=False)
+
+
+# ==============================================================================
+#   WARNING
+#
+#   Everything below is pretty much deprecated.  use the includeme instead and request methods
+#
+# ==============================================================================
+
+
 def gaq_setup(account_id, single_push=False, request=None):
     request = request or get_current_request()
     request._gaq = GaqHub(account_id, single_push=single_push)

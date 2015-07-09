@@ -14,12 +14,12 @@ except:
     pass
 
 requires = [
-    "metadata_utils >=0.0.1",
+    "metadata_utils >=0.0.2",
 ]
 
 setup(
     name="gaq_hub",
-    version="0.0.13",
+    version="0.1.0",
     description="Lightweight Google Analytics support",
     long_description=README,
     classifiers=[

@@ -1,3 +1,7 @@
+0.1.0
+	updating the pyramid implementation to use add_request_method
+	DEPRECATING CURRENT pyramid helpers
+
 0.0.13
 	using and returning explicit unicode strings
 	flake8

@@ -19,7 +19,7 @@ requires = [
 
 setup(
     name="gaq_hub",
-    version="0.1.0",
+    version="0.1.1",
     description="Lightweight Google Analytics support",
     long_description=README,
     classifiers=[

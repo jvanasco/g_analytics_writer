@@ -1,3 +1,6 @@
+0.1.1(UNRELEASED)
+	cleaning up a bit
+
 0.1.0
 	updating the pyramid implementation to use add_request_method
 	DEPRECATING CURRENT pyramid helpers

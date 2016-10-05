@@ -85,7 +85,10 @@ class GaqHub(object):
 
         -- from http://code.google.com/apis/analytics/docs/gaJS/gaJSApiBasicConfiguration.html#_gat.GA_Tracker_._setCustomVar
         """
-        self.data_struct['_setCustomVar'][index] = (escape_text(name), escape_text(value), opt_scope)
+        self.data_struct['_setCustomVar'][index] = (escape_text(name),
+                                                    escape_text(value),
+                                                    opt_scope,
+                                                    )
 
     def setDomainName(self, domain_name):
         """_setDomainName(newDomainName)
@@ -232,9 +235,13 @@ class GaqHub(object):
             u"""var _gaq = _gaq || [];""",
         ]
 
-        (single_pushes, script) = self._inner_render(single_push, single_pushes, script, self.data_struct['_setAccount'], is_secondary_account=False)
+        (single_pushes,
+         script
+         ) = self._inner_render(single_push, single_pushes, script, self.data_struct['_setAccount'], is_secondary_account=False)
         for account_id in self.data_struct['__setAccountAdditional']:
-            (single_pushes, script) = self._inner_render(single_push, single_pushes, script, account_id, is_secondary_account=True)
+            (single_pushes,
+             script
+             ) = self._inner_render(single_push, single_pushes, script, account_id, is_secondary_account=True)
 
         # close the single push if we elected
         if single_push:

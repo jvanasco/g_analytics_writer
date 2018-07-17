@@ -15,10 +15,11 @@ except:
     pass
 
 # store version in the init.py
-with open(
-        os.path.join(
-            os.path.dirname(__file__),
-            'metadata_parser', '__init__.py')) as v_file:
+with open(os.path.join(os.path.dirname(__file__),
+                       'g_analytics_writer',
+                       '__init__.py'
+                       )
+          ) as v_file:
     VERSION = re.compile(
         r".*__VERSION__ = '(.*?)'",
         re.S).match(v_file.read()).group(1)
@@ -41,7 +42,6 @@ setup(
     author_email="jonathan@findmeon.com",
     url="https://github.com/jvanasco/g_analytics_writer",
     license="MIT",
-    py_modules=['g_analytics_writer'],
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,

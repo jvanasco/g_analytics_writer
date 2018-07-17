@@ -1,5 +1,4 @@
 from json import dumps as json_dumps
-import types
 
 
 # logging
@@ -53,7 +52,7 @@ class AnalyticsMode(object):
     GA_JS = 1
     ANALYTICS = 2
     # GTAG = 4
-    
+
     _default = ANALYTICS
     _valid_modes = (GA_JS,
                     ANALYTICS,
@@ -93,7 +92,7 @@ class AnalyticsWriter(object):
             raise ValueError("invalid mode")
         self._mode = mode
         self._use_comments = use_comments
-        
+
         # ga.js allows a force of ssl
         # https://developers.google.com/analytics/devguides/collection/gajs/#ssl
         self._force_ssl = force_ssl
@@ -135,8 +134,8 @@ class AnalyticsWriter(object):
         """
         ga.js
             _trackEvent(category, action, opt_label, opt_value, opt_noninteraction)
-                String   category The general event category (e.g. "Videos"). 
-                String   action The action for the event (e.g. "Play"). 
+                String   category The general event category (e.g. "Videos").
+                String   action The action for the event (e.g. "Play").
                 String   opt_label An optional descriptor for the event.
                 Int      opt_value An optional value associated with the event. You can see your event values in the Overview, Categories, and Actions reports, where they are listed by event or aggregated across events, depending upon your report view.
                 Boolean  opt_noninteraction Default value is false. By default, the event hit sent by _trackEvent() will impact a visitor's bounce rate. By setting this parameter to true, this event hit will not be used in bounce rate calculations.
@@ -159,11 +158,11 @@ class AnalyticsWriter(object):
         ga.js
 
             this is configured ad-hoc
-            
+
             there are up to 6 slots
 
             _gaq.push(['_setCustomVar', slot, name, value, scope)
-            
+
             explained:
 
                 _gaq.push(['_setCustomVar',
@@ -172,15 +171,15 @@ class AnalyticsWriter(object):
                   'Paid',                      // Value
                   1                            // Scope (1 = User scope)
                 ]);
-        
+
         analytics.js
 
             https://developers.google.com/analytics/devguides/collection/analyticsjs/custom-dims-mets
-            
+
             there are up to 20 dimeneions
-        
+
             names are configured on the admin as "dimensions"
-            
+
             ga('set','dimension1','Paid');
         """
         self.data_struct['*custom_variables'][index] = (value,
@@ -212,7 +211,7 @@ class AnalyticsWriter(object):
             # should this compare to the domain?
             return '''onclick="_gaq.push(['_link','%s']); return false;"''' % link
         return ''
-    
+
     def set_user_id(self, user_id):
         """
         ga.js - may not be supported
@@ -246,8 +245,8 @@ class AnalyticsWriter(object):
     def add_transaction(self, track_dict):
         """
         CORE DIFFERENCES
-        
-        
+
+
         ga.js                         | analytics.js
         ------------------------------+------------
         transactionId                 | id
@@ -256,10 +255,10 @@ class AnalyticsWriter(object):
         city                          |
         state                         |
         country                       |
-        
+
         -----
-        
-        
+
+
         ga.js   | https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce?csw=1#_gat.GA_Tracker_._addTrans
             _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
                 String   transactionId Required. Internal unique transaction ID number for this transaction.
@@ -270,10 +269,10 @@ class AnalyticsWriter(object):
                 String   city Optional. City to associate with transaction.
                 String   state Optional. State to associate with transaction.
                 String   country Optional. Country to associate with transaction.
-        
+
         analytics.js | https://developers.google.com/analytics/devguides/collection/upgrade/reference/gajs-analyticsjs
                      | https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
-        
+
                 id	text	Yes	The transaction ID. (e.g. 1234)
                 affiliation	text	No	The store or affiliation from which this transaction occurred (e.g. Acme Clothing).
                 revenue	currency	No	Specifies the total revenue or grand total associated with the transaction (e.g. 11.99). This value may include shipping, tax costs, or other adjustments to total revenue that you want to include as part of your revenue calculations.
@@ -332,7 +331,7 @@ class AnalyticsWriter(object):
         """
         this handles the inner render for ga.js
 
-        args/kwargs:        
+        args/kwargs:
             script = array of script lines
             nested_script = Array of single-push data
             account_id = current account_id, might be nested
@@ -348,7 +347,7 @@ class AnalyticsWriter(object):
         * _trackPageview
 
         Reference Documentation:
-        
+
         cross domain tracking reference
         -------------------------------
         * http://code.google.com/apis/analytics/docs/tracking/gaTrackingSite.html
@@ -375,7 +374,7 @@ class AnalyticsWriter(object):
             _setDomainName(newDomainName)
 
         * via https://developers.google.com/analytics/devguides/collection/gajs/gaTrackingSite#yourDomainName
-        
+
             _setDomainName('yourDomainName')
 
             What it does.
@@ -389,10 +388,10 @@ class AnalyticsWriter(object):
 
         Set Allow Linker
         -------------------------------
-        * via http://code.google.com/apis/analytics/docs/gaJS/gaJSApiDomainDirectory.html#_gat.GA_Tracker_._setAllowLinker  
+        * via http://code.google.com/apis/analytics/docs/gaJS/gaJSApiDomainDirectory.html#_gat.GA_Tracker_._setAllowLinker
 
             _setAllowLinker(bool)
-        
+
         Add Transaction:
         -------------------------------
         * via http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEcommerce.html#_gat.GA_Tracker_._addTrans
@@ -401,7 +400,7 @@ class AnalyticsWriter(object):
 
         Add Item:
         -------------------------------
-        * via http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEcommerce.html#_gat.GA_Tracker_._addItem        
+        * via http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEcommerce.html#_gat.GA_Tracker_._addItem
 
             Use this method to track items purchased by visitors to your ecommerce site. This method tracks individual items by their SKU. This means that the sku parameter is required. This method then associates the item to the parent transaction object via the orderId argument
 
@@ -423,7 +422,7 @@ class AnalyticsWriter(object):
         (secondary_account_name,
          tracker_prefix
          ) = generate_tracker_name(secondary_account)
-        
+
         # _setAccount
         if single_push:
             nested_script.append(u"""['%s_setAccount','%s']""" % (tracker_prefix, account_id))
@@ -470,7 +469,7 @@ class AnalyticsWriter(object):
                     _gaq.push(['_setAccount', 'UA-12345-1']);
                     _gaq.push(['_setDomainName', 'example-petstore.com']);
                     _gaq.push(['_setAllowLinker', true]);
-                    _gaq.push(['_trackPageview']);        
+                    _gaq.push(['_trackPageview']);
                 Offsite Links:
                     <a href="http://www.my-example-blogsite.com/intro"
                        onclick="_gaq.push(['_link', 'http://www.my-example-blogsite.com/intro.html']); return false;">
@@ -510,7 +509,8 @@ class AnalyticsWriter(object):
             # _payload == (value, name, opt_scope)
             # however... we want to send (name, value, opt_scope)
             _payload = self.data_struct['*custom_variables'][index]
-            if not _payload: continue
+            if not _payload:
+                continue
             _payload = (tracker_prefix, index, _payload[1], _payload[0], _payload[2], )
             if _payload[4]:
                 formatted = u"""['%s_setCustomVar',%s,'%s','%s',%s]""" % _payload
@@ -554,8 +554,8 @@ class AnalyticsWriter(object):
                 if transaction_id in self.data_struct['*transaction_items']:
                     for item_dict in self.data_struct['*transaction_items'][transaction_id]:
                         # _addItem(transactionId, sku, name, category, price, quantity)
-                        cleaned_dict = {'transactionId': transaction_id}
-                        _transaction_id = itemDict_to_transactionId(item_dict)  # transactionId is ga.js; id is analytics.js
+                        cleaned_dict = {'transactionId': transaction_id, }
+                        # _transaction_id = itemDict_to_transactionId(item_dict)  # transactionId is ga.js; id is analytics.js
                         # this is impossible due to how we store it
                         # if transaction_id != _transaction_id:
                         #    log.error("transaction id does not match")
@@ -659,7 +659,6 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
             script.append('<!-- End Google Analytics -->')
         return u"""\n""".join(script)
 
-
     def _render__analytics__inner(
         self,
         script,
@@ -673,11 +672,11 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
             create_args['allowLinker'] = True
         if self.data_struct['*user_id']:
             create_args['userId'] = self.data_struct['*user_id']
-        
+
         (secondary_account_name,
          tracker_prefix
          ) = generate_tracker_name(secondary_account)
-        
+
         # account_id first
         # create([trackingId], [cookieDomain], [name], [fieldsObject]);
         if not create_args:
@@ -718,7 +717,8 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
             # payload == (value, name, opt_scope)
             # however... we only send the VALUE, because name+opt_scope are handled on the admin dashboard
             _payload = self.data_struct['*custom_variables'][index]
-            if not _payload: continue
+            if not _payload:
+                continue
             pagehit_data[index] = _payload[0]  # value
 
         # pageview
@@ -766,8 +766,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         else:
             if self.data_struct['*transaction_items']:
                 log.error('no transaction registered, but transaction_items added')
-                
-                
+
         # events
         # ga('send', 'event', 'category', 'action', 'opt_label', opt_value, {'nonInteraction': 1});
         _events = []
@@ -805,7 +804,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');""")
 
         account_id = self.data_struct['*account_id']
-        (script, 
+        (script,
          nested_script
          ) = self._render__analytics__inner(script,
                                             nested_script,
@@ -817,24 +816,15 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             (script,
              nested_script,
              ) = self._render__analytics__inner(script,
-                                           nested_script,
-                                           account_id,
-                                           secondary_account=idx,
-                                           )
-
-
+                                                nested_script,
+                                                account_id,
+                                                secondary_account=idx,
+                                                )
 
         script.append(u"""</script>""")
         if self._use_comments:
             script.append('<!-- End Google Analytics -->')
         return u"""\n""".join(script)
-
-    def _render_gtag_head(self):
-        """
-        it is now recommended to use the gtag javascript, placed in the HEAD
-            * https://support.google.com/analytics/answer/1008080?hl=en&ref_topic=1008079
-        """
-        return TEMPLATE_gtag_head % {'account_id': self.data_struct['*account_id'] }
 
     def _render__gtag(self):
         """\
@@ -863,8 +853,6 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         if (mode is not None) and (mode not in AnalyticsMode._valid_modes):
             raise ValueError("invalid mode")
         mode = mode if mode is not None else self._mode
-
-
         if mode == AnalyticsMode.GA_JS:
             return self._render__ga_js()
         elif mode == AnalyticsMode.ANALYTICS:

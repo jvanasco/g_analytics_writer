@@ -7,7 +7,11 @@ import logging
 log = logging.getLogger(__name__)
 
 
+__VERSION__ = '0.2.0a'
+
+
 # ==============================================================================
+
 
 '''
 def escape_text(text=''):

@@ -1,7 +1,6 @@
 0.2
 * initial commit
-* forked from gaq_hub
-** renamed `g_analytics_writer`
+* renamed `g_analytics_writer`, was `gaq_hub`
 * dropped pylons support
 * the package now handles an internal format for tracking the data, and writes
   in one of multiple google analytics formats

@@ -1,5 +1,7 @@
 g_analytics_writer gives lightweight support for writing Google Analytics
 
+This is a prerelease and I am actively working on a proper release.
+
 It offers a AnalyticsWriter object, which offers a standard API to multiple Google Analytics tracking formats:
 
 * ga.js (historical format)

@@ -1,192 +1,470 @@
+import json
 import types
 
 
+# logging
+import logging
+log = logging.getLogger(__name__)
+
+
+# ==============================================================================
+
+
 def escape_text(text=''):
+    """helper function"""
     text = str(text)
     return text.replace("\'", "\\'")
 
 
-class GaqHub(object):
+def cleanup_js_dict_to_quoted(a_dict):
+    copied_dict = {}
+    for k, v in a_dict.items():
+        if v is None:
+            v = 'undefined'  # set to undefined
+        else:
+            v = "'%s'" % v  # wrap in single quotes
+        copied_dict[k] = v
+    return copied_dict
+
+def itemDict_to_transactionId(itemDict):
+    _transaction_id = itemDict.get('transactionId', None) or itemDict.get('id', None)
+    return _transaction_id
+
+class AnalyticsMode(object):
+    GA_JS = 1
+    ANALYTICS = 2
+    # GTAG = 4
+    
+    _default = ANALYTICS
+    _valid_modes = (GA_JS,
+                    ANALYTICS,
+                    # GTAG,
+                    )
+    _supports_single_push = (GA_JS, )
+
+
+TEMPLATE_gtag_head = u"""\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=%(account_id)s"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config','%(account_id)s');
+</script>
+"""
+
+TEMPLATE_analytics_js_async = u"""window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;"""
+TEMPLATE_analytics_js_async_end = u"""<script async src='https://www.google-analytics.com/analytics.js'></script>"""
+
+
+# ==============================================================================
+
+
+class AnalyticsWriter(object):
     data_struct = None
+    _mode = None
 
-    def __init__(self, account_id, single_push=False):
-        """Sets up self.data_struct dict which we use for storage.
+    def __init__(
+        self,
+        account_id,
+        mode=AnalyticsMode._default,
+        use_comments=True,
+        single_push=False,
+        ):
+        """
+        Sets up self.data_struct dict which we use for storage.
 
-            You'd probably have something like this in your base controller:
+        You'd probably have something like this in your base controller:
 
-            class Handler(object):
-                def __init__(self, request):
-                    self.request = request
-                    h.gaq_setup(self.request, 'AccountId')
+        class Handler(object):
+            def __init__(self, request):
+                self.request = request
+                h.gaq_setup('AccountId')
 
-            All of the other commands in the module accept an optional 'request' kwarg.
-
-            If no 'request' is submitted, it will call pyramid.threadlocal.get_current_request()
-
-            This should allow you to easily and cleanly call this within templates, and not just handler methods.
 
         """
+        if mode not in AnalyticsMode._valid_modes:
+            raise ValueError("invalid mode")
+        self._mode = mode
+        self._use_comments = use_comments
+
         self.data_struct = {
-            '__singlePush': single_push,
-            '__setAccountAdditional': set({}),
+            '*single_push': single_push,
+            '*account_id': account_id,
+            '*additional_accounts': set({}),
 
-            '_setAccount': account_id,
+            '*tracked_events': [],
 
-            '_setCustomVar': dict((i, None) for i in range(1, 6)),
+            '*custom_variables': {},
+            '*transaction': {},  # dict of k/v by transactionId
+            '*transaction_items': {},  # dict of k:LIST by transactionId
 
-            '_setDomainName': False,
-            '_setAllowLinker': False,
-
-            '_addTrans': [],
-            '_addItem': [],
-            '_trackTrans': False,
-
-            '_trackEvent': [],
+            '*crossdomain_tracking': None,
 
         }
 
-    def setAccount(self, account_id):
+    def set_account(self, account_id):
         """This should really never be called, best to setup during __init__, where it is required"""
-        self.data_struct['_setAccount'] = account_id
+        self.data_struct['*account_id'] = account_id
 
-    def setAccountAdditional_add(self, account_id):
+    def set_account_additional__add(self, account_id):
         """add an additional account id to send the data to.  please note - this is only tested to work with the async method.
         """
-        self.data_struct['__setAccountAdditional'].add(account_id)
+        self.data_struct['*additional_accounts'].add(account_id)
 
-    def setAccountAdditional_del(self, account_id):
+    def set_account_additional__del(self, account_id):
         try:
-            self.data_struct['__setAccountAdditional'].remove(account_id)
+            self.data_struct['*additional_accounts'].remove(account_id)
         except KeyError:
             pass
 
-    def setSinglePush(self, bool_value):
-        """GA supports a single 'push' event.  """
-        self.data_struct['__singlePush'] = bool_value
-
-    def trackEvent(self, track_dict):
-        """'Constructs and sends the event tracking call to the Google Analytics Tracking Code. Use this to track visitor behavior on your website that is not related to a web page visit, such as interaction with a Flash video movie control or any user event that does not trigger a page request. For more information on Event Tracking, see the Event Tracking Guide.
-
-        You can use any of the following optional parameters: opt_label, opt_value or opt_noninteraction. If you want to provide a value only for the second or 3rd optional parameter, you need to pass in undefined for the preceding optional parameter.'
-
-        -- from http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEventTracking.html#_gat.GA_EventTracker_._trackEvent
+    def set_single_push(self, bool_value):
         """
-        clean = []
-        for i in ['category', 'actions', 'opt_label', 'opt_value', 'opt_noninteraction']:
-            if i in track_dict:
-                clean.append("'%s'" % track_dict[i])
-            else:
-                clean.append('undefined')
-        self.data_struct['_trackEvent'].append("""['_trackEvent',%s]""" % ','.join(clean))
-
-    def setCustomVar(self, index, name, value, opt_scope=None):
-        """_setCustomVar(index, name, value, opt_scope)
-        'Sets a custom variable with the supplied name, value, and scope for the variable. There is a 64-byte character limit for the name and value combined.'
-
-        -- from http://code.google.com/apis/analytics/docs/gaJS/gaJSApiBasicConfiguration.html#_gat.GA_Tracker_._setCustomVar
+        `ga.js` supports a single 'push' event, which can consolidate the API calls
         """
-        self.data_struct['_setCustomVar'][index] = (escape_text(name),
-                                                    escape_text(value),
-                                                    opt_scope,
-                                                    )
+        self.data_struct['*single_push'] = bool_value
 
-    def setDomainName(self, domain_name):
-        """_setDomainName(newDomainName)
-
-        -- from http://code.google.com/apis/analytics/docs/gaJS/gaJSApiDomainDirectory.html#_gat.GA_Tracker_._setDomainName
+    def track_event(self, track_dict):
         """
-        self.data_struct['_setDomainName'] = domain_name
+        ga.js
+            _trackEvent(category, action, opt_label, opt_value, opt_noninteraction)
+                String   category The general event category (e.g. "Videos"). 
+                String   action The action for the event (e.g. "Play"). 
+                String   opt_label An optional descriptor for the event.
+                Int      opt_value An optional value associated with the event. You can see your event values in the Overview, Categories, and Actions reports, where they are listed by event or aggregated across events, depending upon your report view.
+                Boolean  opt_noninteraction Default value is false. By default, the event hit sent by _trackEvent() will impact a visitor's bounce rate. By setting this parameter to true, this event hit will not be used in bounce rate calculations.
 
-    def setAllowLinker(self, bool_allow):
-        """_setAllowLinker(bool)
-        http://code.google.com/apis/analytics/docs/gaJS/gaJSApiDomainDirectory.html#_gat.GA_Tracker_._setAllowLinker
+        analytics.js
+                ga('send','event','category','action','opt_label', opt_value, {'nonInteraction': 1});
         """
-        self.data_struct['_setAllowLinker'] = bool_allow
+        self.data_struct['*tracked_events'].append(track_dict)
 
-    def addTrans(self, track_dict):
-        """'Creates a transaction object with the given values. As with _addItem(), this method handles only transaction tracking and provides no additional ecommerce functionality. Therefore, if the transaction is a duplicate of an existing transaction for that session, the old transaction values are over-written with the new transaction values. Arguments for this method are matched by position, so be sure to supply all parameters, even if some of them have an empty value.'
-
-        -- from http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEcommerce.html#_gat.GA_Tracker_._addTrans
+    def set_custom_variable(self, index, value, name=None, opt_scope=None):
         """
-        for i in ['order_id', 'total']:  # fix required ; let javascript show errors if null
-            if i not in track_dict:
-                track_dict[i] = ''
-        for i in ['opt_affiliation', 'opt_tax', 'opt_shipping', 'opt_city', 'opt_state', 'opt_country']:  # fix optionals for positioning
-            if i not in track_dict:
-                track_dict[i] = ''
-        self.data_struct['_addTrans'].append("""['_addTrans',%(order_id)s,'%(opt_affiliation)s','%(total)s','%(opt_tax)s','%(opt_shipping)s','%(opt_city)s','%(opt_state)s','%(opt_country)s']""" % track_dict)
+        IMPORTANT.
 
-    def addItem(self, track_dict):
-        """'Use this method to track items purchased by visitors to your ecommerce site. This method tracks individual items by their SKU. This means that the sku parameter is required. This method then associates the item to the parent transaction object via the orderId argument'
+        Note the following design decision:
+            VALUE is required
+            NAME is not, and comes after VALUE
 
-        --from http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEcommerce.html#_gat.GA_Tracker_._addItem
+        There are slight differences in how this is handled:
+
+        ga.js
+
+            this is configured ad-hoc
+            
+            there are up to 6 slots
+
+            _gaq.push(['_setCustomVar', slot, name, value, scope)
+            
+            explained:
+
+                _gaq.push(['_setCustomVar',
+                  1,                           // Slot
+                  'Customer Type',             // Name
+                  'Paid',                      // Value
+                  1                            // Scope (1 = User scope)
+                ]);
+        
+        analytics.js
+
+            https://developers.google.com/analytics/devguides/collection/analyticsjs/custom-dims-mets
+            
+            there are up to 20 dimeneions
+        
+            names are configured on the admin as "dimensions"
+            
+            ga('set','dimension1','Paid');
         """
-        for i in ['order_id', 'sku', 'name', 'price', 'quantity']:  # fix required ; let javascript show errors if null
-            if i not in track_dict:
-                track_dict[i] = ''
-        for i in ['category']:  # fix optionals for positioning
-            if i not in track_dict:
-                track_dict[i] = ''
-        self.data_struct['_addItem'].append("""['_addItem',%(order_id)s,'%(sku)s','%(name)s','%(category)s','%(price)s','%(quantity)s']""" % track_dict)
+        self.data_struct['*custom_variables'][index] = (value,
+                                                        name if name else '',
+                                                        opt_scope,
+                                                        )
 
-    def trackTrans(self):
-        """gaq_trackTrans(request=None)- You merely have to call this to enable it. I decided to require this, instead of automatically calling it if a transaction exists, because this must be explicitly called in the ga.js API and its safer to reinforce this behavior.
-
-        'Sends both the transaction and item data to the Google Analytics server. This method should be called after _trackPageview(), and used in conjunction with the _addItem() and addTrans() methods. It should be called after items and transaction elements have been set up.'
-
-        --from http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEcommerce.html#_gat.GA_Tracker_._trackTrans
+    def set_crossdomain_tracking(self, domain_name, all_domains=None):
         """
-        self.data_struct['_trackTrans'] = True
+        ga.js
+            just set in the domain name to link to
+        """
+        if self.data_struct['*crossdomain_tracking'] is None:
+            self.data_struct['*crossdomain_tracking'] = {}
+        self.data_struct['*crossdomain_tracking'] = {'domain': domain_name, }
+        if all_domains:
+            if type(all_domains) not in (list, tuple):
+                all_domains = [all_domains, ]
+            self.data_struct['*crossdomain_tracking']['all_domains'] = all_domains
 
-    def _inner_render(self, single_push, single_pushes, script, account_id, is_secondary_account=False):
+    def render_crossdomain_link_attrs(self, link):
+        """
+        ga.js
+            renders onclick
+        """
+        if self._mode == AnalyticsMode.GA_JS:
+            # should this compare to the domain?
+            return '''onclick="_gaq.push(['_link','%s']); return false;"''' % link
+        # ANALYTICS loads a plugin which automates the above using javascript
+        return ''
+
+    def add_transaction(self, track_dict):
+        """
+        CORE DIFFERENCES
+        
+        
+        ga.js                         | analytics.js
+        ------------------------------+------------
+        transactionId                 | id
+        total [excludes tax/shipping] | -
+        -                             | revenue [includes tax/shipping]
+        city                          |
+        state                         |
+        country                       |
+        
+        -----
+        
+        
+        ga.js   | https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce?csw=1#_gat.GA_Tracker_._addTrans
+            _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
+                String   transactionId Required. Internal unique transaction ID number for this transaction.
+                String   affiliation Optional. Partner or store affiliation (undefined if absent).
+                String   total Required. Total dollar amount of the transaction. Does not include tax and shipping and should only be considered the "grand total" if you explicity include shipping and tax.
+                String   tax Optional. Tax amount of the transaction.
+                String   shipping Optional. Shipping charge for the transaction.
+                String   city Optional. City to associate with transaction.
+                String   state Optional. State to associate with transaction.
+                String   country Optional. Country to associate with transaction.
+        
+        analytics.js | https://developers.google.com/analytics/devguides/collection/upgrade/reference/gajs-analyticsjs
+                     | https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
+        
+                id	text	Yes	The transaction ID. (e.g. 1234)
+                affiliation	text	No	The store or affiliation from which this transaction occurred (e.g. Acme Clothing).
+                revenue	currency	No	Specifies the total revenue or grand total associated with the transaction (e.g. 11.99). This value may include shipping, tax costs, or other adjustments to total revenue that you want to include as part of your revenue calculations.
+                shipping	currency	No	Specifies the total shipping cost of the transaction. (e.g. 5)
+                tax	currency	No	Specifies the total tax of the transaction. (e.g. 1.29)
+
+                ga('ecommerce:addTransaction', {
+                  'id': '1234',                     // Transaction ID. Required.
+                  'affiliation': 'Acme Clothing',   // Affiliation or store name.
+                  'revenue': '11.99',               // Grand Total.
+                  'shipping': '5',                  // Shipping.
+                  'tax': '1.29'                     // Tax.
+                });
+
+        """
+        # stash this into a dict
+        _transaction_id = itemDict_to_transactionId(track_dict)  # transactionId is ga.js; id is analytics.js
+        self.data_struct['*transaction'][_transaction_id] = track_dict
+
+    def add_transaction_item(self, track_dict):
+        """
+        ga.js   | https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce#_gat.GA_Tracker_._addItem
+            _addItem(transactionId, sku, name, category, price, quantity)
+                String   transactionId Optional Order ID of the transaction to associate with item.
+                String   sku Required. Item's SKU code.
+                String   name Required. Product name. Required to see data in the product detail report.
+                String   category Optional. Product category.
+                String   price Required. Product price.
+                String   quantity Required. Purchase quantity.
+
+        analytics.js | https://developers.google.com/analytics/devguides/collection/upgrade/reference/gajs-analyticsjs
+                     | https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
+
+            ga('ecommerce:addItem', {
+              'id': '1234',                     // Transaction ID. Required.
+              'name': 'Fluffy Pink Bunnies',    // Product name. Required.
+              'sku': 'DD23444',                 // SKU/code.
+              'category': 'Party Toys',         // Category or variation.
+              'price': '11.99',                 // Unit price.
+              'quantity': '1'                   // Quantity.
+            });
+        """
+        _transaction_id = itemDict_to_transactionId(track_dict)  # transactionId is ga.js; id is analytics.js
+        if _transaction_id not in self.data_struct['*transaction_items']:
+            self.data_struct['*transaction_items'][_transaction_id] = []
+        self.data_struct['*transaction_items'][_transaction_id].append(track_dict)
+
+    def _inner_render__ga_js(
+        self,
+        script,
+        nested_script,
+        account_id,
+        single_push,
+        is_secondary_account=False,
+    ):
+        """
+        this handles the inner render for ga.js
+
+        args/kwargs:        
+            script = array of script lines
+            nested_script = Array of single-push data
+            account_id = current account_id, might be nested
+            single_push = Boolean. True if this is a single-push element
+            is_secondary_account = Boolean flag.
+        returns:
+            tuple (script, nested_script)
+
+        according to GA docs, the order to submit via javascript is:
+        * _setAccount
+        * _setDomainName
+        * _setAllowLinker
+        * _trackPageview
+
+        Reference Documentation:
+        
+        cross domain tracking reference
+        -------------------------------
+        * http://code.google.com/apis/analytics/docs/tracking/gaTrackingSite.html
+
+        Event Tracking - trackEvent
+        -------------------------------
+        * via: http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEventTracking.html#_gat.GA_EventTracker_._trackEvent
+
+            Constructs and sends the event tracking call to the Google Analytics Tracking Code. Use this to track visitor behavior on your website that is not related to a web page visit, such as interaction with a Flash video movie control or any user event that does not trigger a page request. For more information on Event Tracking, see the Event Tracking Guide.
+
+            You can use any of the following optional parameters: opt_label, opt_value or opt_noninteraction. If you want to provide a value only for the second or 3rd optional parameter, you need to pass in undefined for the preceding optional parameter.
+
+        Custom Variables - setCustomVar
+        -------------------------------
+        * via: http://code.google.com/apis/analytics/docs/gaJS/gaJSApiBasicConfiguration.html#_gat.GA_Tracker_._setCustomVar
+
+            _setCustomVar(index, name, value, opt_scope)
+            Sets a custom variable with the supplied name, value, and scope for the variable. There is a 64-byte character limit for the name and value combined.
+
+        Set Domain Name
+        -------------------------------
+        * via: http://code.google.com/apis/analytics/docs/gaJS/gaJSApiDomainDirectory.html#_gat.GA_Tracker_._setDomainName
+
+            _setDomainName(newDomainName)
+
+        Set Allow Linker
+        -------------------------------
+        * via: http://code.google.com/apis/analytics/docs/gaJS/gaJSApiDomainDirectory.html#_gat.GA_Tracker_._setAllowLinker  
+
+            _setAllowLinker(bool)
+        
+        Add Transaction:
+        -------------------------------
+        * via http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEcommerce.html#_gat.GA_Tracker_._addTrans
+
+            Creates a transaction object with the given values. As with _addItem(), this method handles only transaction tracking and provides no additional ecommerce functionality. Therefore, if the transaction is a duplicate of an existing transaction for that session, the old transaction values are over-written with the new transaction values. Arguments for this method are matched by position, so be sure to supply all parameters, even if some of them have an empty value.'
+
+        Add Item:
+        -------------------------------
+        * via http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEcommerce.html#_gat.GA_Tracker_._addItem        
+
+            Use this method to track items purchased by visitors to your ecommerce site. This method tracks individual items by their SKU. This means that the sku parameter is required. This method then associates the item to the parent transaction object via the orderId argument
+
+        * Track Transaction
+        -------------------------------
+        * via http://code.google.com/apis/analytics/docs/gaJS/gaJSApiEcommerce.html#_gat.GA_Tracker_._trackTrans
+
+           Sends both the transaction and item data to the Google Analytics server. This method should be called after _trackPageview(), and used in conjunction with the _addItem() and addTrans() methods. It should be called after items and transaction elements have been set up.
+        """
         # start the single push if we elected
         if single_push:
             script.append(u"""_gaq.push(""")
 
-        # according to GA docs, the order to submit via javascript is:
-        # # _setAccount
-        # # _setDomainName
-        # # _setAllowLinker
-        # #
-        # # cross domain tracking reference
-        # # http://code.google.com/apis/analytics/docs/tracking/gaTrackingSite.html
-
         # _setAccount
         if single_push:
-            single_pushes.append(u"""['_setAccount', '%s']""" % account_id)
+            nested_script.append(u"""['_setAccount','%s']""" % account_id)
         else:
-            script.append(u"""_gaq.push(['_setAccount', '%s']);""" % account_id)
+            script.append(u"""_gaq.push(['_setAccount','%s']);""" % account_id)
 
-        # _setDomainName
-        if self.data_struct['_setDomainName']:
-            if single_push:
-                single_pushes.append(u"""['_setDomainName', '%s']""" % self.data_struct['_setDomainName'])
-            else:
-                script.append(u"""_gaq.push(['_setDomainName', '%s']);""" % self.data_struct['_setDomainName'])
+        # crossdomain_tracking
+        """
+        ga.js
+            Online Store Domain: www.example-petstore.com
+                Setup:
+                    var pageTracker = _gat._getTracker('UA-12345-1');
+                    pageTracker._setDomainName('example-petstore.com');
+                    pageTracker._setAllowLinker(true);
+                    pageTracker._trackPageview();
+                Offsite Links:
+                    <a href="http://www.my-example-blogsite.com/intro.html"
+                       onclick="pageTracker._link('http://www.my-example-blogsite.com/intro.html'); return false;">
 
-        # _setAllowLinker
-        if self.data_struct['_setAllowLinker']:
+            Online Store Subdomain: dogs.example-petstore.com
+                Setup:
+                    var pageTracker = _gat._getTracker('UA-12345-1');
+                    pageTracker._setDomainName('example-petstore.com');
+                    pageTracker._setAllowLinker(true);
+                    pageTracker._trackPageview();
+                Offsite Links:
+                    <a href="http://www.my-example-blogsite.com/intro.html"
+                       onclick="pageTracker._link('http://www.my-example-blogsite.com/intro.html'); return false;">
+
+            Blog Domain: www.my-example-blogsite.com
+                Setup:
+                    var pageTracker = _gat._getTracker('UA-12345-1');
+                    pageTracker._setDomainName('my-example-blogsite.com');
+                    pageTracker._setAllowLinker(true);
+                    pageTracker._trackPageview();
+                Offsite Links:
+                    <a href="http://dogs.example-petstore.com/intro.html"
+                       onclick="pageTracker._link('http://dogs.example-petstore.com/intro.html'); return false;">
+
+        async
+            Online Store Domain: www.example-petstore.com
+                Setup:
+                    var _gaq = _gaq || [];
+                    _gaq.push(['_setAccount', 'UA-12345-1']);
+                    _gaq.push(['_setDomainName', 'example-petstore.com']);
+                    _gaq.push(['_setAllowLinker', true]);
+                    _gaq.push(['_trackPageview']);        
+                Offsite Links:
+                    <a href="http://www.my-example-blogsite.com/intro"
+                       onclick="_gaq.push(['_link', 'http://www.my-example-blogsite.com/intro.html']); return false;">
+            Online Store Subdomain: dogs.example-petstore.com
+                Setup:
+                    var _gaq = _gaq || [];
+                    _gaq.push(['_setAccount', 'UA-12345-1']);
+                    _gaq.push(['_setDomainName', 'example-petstore.com']);
+                    _gaq.push(['_setAllowLinker', true]);
+                    _gaq.push(['_trackPageview']);
+                Offsite Links:
+                    <a href="http://www.my-example-blogsite.com/intro.html"
+                       onclick="_gaq.push(['_link', 'http://www.my-example-blogsite.com/intro.html']); return false;">
+            Blog Domain: www.my-example-blogsite.com
+                Setup:
+                    var _gaq = _gaq || [];
+                    _gaq.push(['_setAccount', 'UA-12345-1']);
+                    _gaq.push(['_setDomainName', 'my-example-blogsite.com']);
+                    _gaq.push(['_setAllowLinker', true]);
+                    _gaq.push(['_trackPageview']);
+                Offsite Links:
+                    <a href="http://dogs.example-petstore.com/intro.html"
+                       onclick="_gaq.push(['_link', 'http://dogs.example-petstore.com/intro.html']); return false;">
+        """
+        if self.data_struct['*crossdomain_tracking']:
             if single_push:
-                single_pushes.append(u"""['_setAllowLinker', %s]""" % ("%s" % self.data_struct['_setAllowLinker']).lower())
+                nested_script.append(u"""['_setDomainName','%s']""" % self.data_struct['*crossdomain_tracking']['domain'])
+                nested_script.append(u"""['_setAllowLinker',true]""")
             else:
-                script.append(u"""_gaq.push(['_setAllowLinker', %s]);""" % ("%s" % self.data_struct['_setAllowLinker']).lower())
+                script.append(u"""_gaq.push(['_setDomainName','%s']);""" % self.data_struct['*crossdomain_tracking']['domain'])
+                script.append(u"""_gaq.push(['_setAllowLinker',true]);""")
 
         # _setCustomVar is next
-        for index in self.data_struct['_setCustomVar'].keys():
-            _payload = self.data_struct['_setCustomVar'][index]
+        for index in sorted(self.data_struct['*custom_variables'].keys()):
+            # for ga.js:
+            # index == str(integer)
+            # _payload == (value, name, opt_scope)
+            # however... we want to send (name, value, opt_scope)
+            _payload = self.data_struct['*custom_variables'][index]
             if not _payload: continue
-            _payload = (index, ) + _payload
+            _payload = (index, _payload[1], _payload[0], _payload[2], )
             if _payload[3]:
                 formatted = u"""['_setCustomVar',%s,'%s','%s',%s]""" % _payload
             else:
                 formatted = u"""['_setCustomVar',%s,'%s','%s']""" % _payload[:3]
             if single_push:
-                single_pushes.append(formatted)
+                nested_script.append(formatted)
             else:
                 script.append(u"""_gaq.push(%s);""" % formatted)
 
         if single_push:
-            single_pushes.append(u"""['_trackPageview']""")
+            nested_script.append(u"""['_trackPageview']""")
         else:
             script.append(u"""_gaq.push(['_trackPageview']);""")
 
@@ -195,64 +473,315 @@ class GaqHub(object):
         # # _addTrans
         # # _addItem
         # # _trackTrans
-        for category in ['_addTrans', '_addItem']:
-            for i in self.data_struct[category]:
+        if self.data_struct['*transaction']:
+            for transaction_id in self.data_struct['*transaction'].keys():
+                # _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
+                transaction_dict = self.data_struct['*transaction'][transaction_id]
+                # these two fields are REQUIRED
+                for i in ['transactionId', 'total']:  # fix required ; let javascript show errors if null
+                    if i not in transaction_dict:
+                        log.error('transaction field is missing: %s', i)
+                        transaction_dict[i] = None
+                for i in ['affiliation', 'tax', 'shipping', 'city', 'state', 'country']:  # fix optionals before positioning
+                    if i not in transaction_dict:
+                        transaction_dict[i] = None
+                cleaned_dict = cleanup_js_dict_to_quoted(transaction_dict)
+                _formatted = """['_addTrans',%(transactionId)s,%(affiliation)s,%(total)s,%(tax)s,%(shipping)s,%(city)s,%(state)s,%(country)s]""" % cleaned_dict
                 if single_push:
-                    single_pushes.append(i)
+                    nested_script.append(_formatted)
                 else:
-                    script.append(u"""_gaq.push(%s);""" % i)
+                    script.append(u"""_gaq.push(%s);""" % _formatted)
 
-        if self.data_struct['_trackTrans']:
+                if transaction_id in self.data_struct['*transaction_items']:
+                    for item_dict in self.data_struct['*transaction_items'][transaction_id]:
+                        # _addItem(transactionId, sku, name, category, price, quantity)
+                        cleaned_dict = {'transactionId': transaction_id}
+                        _transaction_id = itemDict_to_transactionId(item_dict)  # transactionId is ga.js; id is analytics.js
+                        # this is impossible due to how we store it
+                        # if transaction_id != _transaction_id:
+                        #    log.error("transaction id does not match")
+                        for i in ['sku', 'name', 'category', 'price', 'quantity', ]:  # fix required ; let javascript show errors if null
+                            if i in item_dict:
+                                cleaned_dict[i] = item_dict[i]
+                            else:
+                                cleaned_dict[i] = None
+                        cleaned_dict = cleanup_js_dict_to_quoted(cleaned_dict)
+                        _formatted = """['_addItem',%(transactionId)s,%(sku)s,%(name)s,%(category)s,%(price)s,%(quantity)s]""" % cleaned_dict
+                        if single_push:
+                            nested_script.append(_formatted)
+                        else:
+                            script.append(u"""_gaq.push(%s);""" % _formatted)
+
+            # send the _trackTransaction
+            # https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce?csw=1#_gat.GA_Tracker_._addTrans
+            # Sends both the transaction and item data to the Google Analytics server. This method should be called after _trackPageview(), and used in conjunction with the _addItem() and addTrans() methods. It should be called after items and transaction elements have been set up.
             if single_push:
-                single_pushes.append(u"""['_trackTrans']""")
+                nested_script.append(u"""['_trackTrans']""")
             else:
                 script.append(u"""_gaq.push(['_trackTrans']);""")
 
-        # events seem to be on their own.
-        for category in ['_trackEvent']:
-            for i in self.data_struct[category]:
-                if single_push:
-                    single_pushes.append(i)
+        else:
+            if self.data_struct['*transaction_items']:
+                log.error('no transaction registered, but transaction_items added')
+
+        # events are handled in a peculiar way
+        _events = []
+        for _event_dict in self.data_struct['*tracked_events']:
+            _event_args = []
+            # the `_trackEvent` api expects the args in this order. render 'undefined'
+            for field in ['category', 'action', 'opt_label', 'opt_value', 'opt_noninteraction', ]:
+                if field in _event_dict:
+                    _value = _event_dict[field]
+                    if field in ('opt_noninteraction', ):
+                        _value = str(bool(_value)).lower()
+                    else:
+                        _value = "'%s'" % _value
                 else:
-                    script.append(u"""_gaq.push(%s);""" % i)
-        return single_pushes, script
+                    _value = "undefined"
+                _event_args.append(_value)
+            _events.append("""['_trackEvent',%s]""" % ','.join(_event_args))
+        if _events:
+            for _event in _events:
+                if single_push:
+                    single_pushes.append(_event)
+                else:
+                    script.append(u"""_gaq.push(%s);""" % _event)
+        # end events
 
-    def as_html(self):
-        """helper function. prints out GA code for you, in the right order.
+        # done
+        return script, nested_script
 
-        You'd probably call it like this in a Mako template:
-            <head>
-                ${h.as_html()|n}
-            </head>
-
-        Notice that you have to escape under Mako.   For more information on mako escape options - http://www.makotemplates.org/docs/filtering.html
+    def _render_gtag_head(self):
         """
-        single_push = self.data_struct['__singlePush']
-        single_pushes = []
+        it is now recommended to use the gtag javascript, placed in the HEAD
+            * https://support.google.com/analytics/answer/1008080?hl=en&ref_topic=1008079
+        """
+        return TEMPLATE_gtag_head % {'account_id': self.data_struct['*account_id'] }
 
-        script = [
-            u"""<script type="text/javascript">""",
-            u"""var _gaq = _gaq || [];""",
-        ]
 
-        (single_pushes,
-         script
-         ) = self._inner_render(single_push, single_pushes, script, self.data_struct['_setAccount'], is_secondary_account=False)
-        for account_id in self.data_struct['__setAccountAdditional']:
-            (single_pushes,
-             script
-             ) = self._inner_render(single_push, single_pushes, script, account_id, is_secondary_account=True)
+    def _render__ga_js(self):
+        single_push = self.data_struct['*single_push']
+        nested_script = []
+
+        script = []
+        if self._use_comments:
+            script.append(u"""<!-- Google Analytics -->""")
+        script.append(u"""<script type="text/javascript">""")
+        script.append(u"""var _gaq = _gaq || [];""")
+
+        (script,
+         nested_script,
+         ) = self._inner_render__ga_js(script,
+                                       nested_script,
+                                       self.data_struct['*account_id'],
+                                       single_push,
+                                       is_secondary_account=False,
+                                       )
+        for account_id in self.data_struct['*additional_accounts']:
+            (script,
+             nested_script,
+             ) = self._inner_render__ga_js(script,
+                                           nested_script,
+                                           account_id,
+                                           single_push,
+                                           is_secondary_account=True
+                                           )
 
         # close the single push if we elected
         if single_push:
-            script.append(u""",\n""".join(single_pushes))
+            script.append(u""",\n""".join(nested_script))
             script.append(u""");""")
 
-        script.append(u"""(function() {
-        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
-        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-     })();""")
+        script.append(u"""\
+(function() {
+var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
+var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();""")
         script.append(u"""</script>""")
+        if self._use_comments:
+            script.append('<!-- End Google Analytics -->')
+        return u"""\n""".join(script)
+
+
+    def _render__analytics_inner(self, script, account_id):
+        # account_id first
+        if not self.data_struct['*crossdomain_tracking']:
+            script.append(u"""ga('create','%s','auto');""" % account_id)
+        else:
+            script.append(u"""ga('create','%s','auto',{'allowLinker':true});""" % account_id)
+            script.append(u"""ga('require','linker');""")
+            destination_domain = self.data_struct['*crossdomain_tracking']['domain']
+            _all_domains = self.data_struct['*crossdomain_tracking'].get('all_domains')
+            if _all_domains:
+                destination_domain = set([destination_domain, ])
+                destination_domain.update(_all_domains)
+                destination_domain = sorted(destination_domain)
+                destination_domain = ','.join(["'%s'" % domain for domain in destination_domain])
+            else:
+                destination_domain = "'%s'" % destination_domain
+            script.append(u"""ga('linker:autoLink',[%s]);""" % destination_domain)
+
+        # custom variables?
+        pagehit_data = {}
+        for index in sorted(self.data_struct['*custom_variables'].keys()):
+            # for ga.js:
+            # index == str(integer)
+            # payload == (value, name, opt_scope)
+            # however... we only send the VALUE, because name+opt_scope are handled on the admin dashboard
+            _payload = self.data_struct['*custom_variables'][index]
+            if not _payload: continue
+            pagehit_data[index] = _payload[0]  # value
+
+        # pageview
+        # ga('send', 'pageview');
+        if pagehit_data:
+            formatted_line = u"""ga('send','pageview',%s);""" % json.dumps(pagehit_data)
+            script.append(formatted_line)
+        else:
+            script.append(u"""ga('send','pageview');""")
+
+        # according to GA docs, the order to submit via javascript is:
+        # # ga('send', 'pageview');
+        # # ga('require', 'ecommerce');   // Load the ecommerce plug-in.
+        # # ecommerce:addTransaction
+        # # ecommerce:addItem
+        # # ga('ecommerce:send');
+        if self.data_struct['*transaction']:
+            script.append(u"""ga('require','ecommerce');""")
+
+            for transaction_id in self.data_struct['*transaction'].keys():
+                # _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
+                transaction_dict = self.data_struct['*transaction'][transaction_id]
+                # required field
+                cleaned_dict = {'id': str(transaction_id), }
+                for i in ['affiliation', 'revenue', 'shipping', 'tax', ]:  # fix optionals before positioning
+                    if i in transaction_dict:
+                        v = transaction_dict[i]
+                        cleaned_dict[i] = str(v) if v is not None else None
+                _formatted = u"""ga('ecommerce:addTransaction',%s)""" % json.dumps(cleaned_dict)
+                script.append(_formatted)
+
+                if transaction_id in self.data_struct['*transaction_items']:
+                    for item_dict in self.data_struct['*transaction_items'][transaction_id]:
+                        # _addItem(transactionId, sku, name, category, price, quantity)
+                        cleaned_dict = {'id': str(transaction_id), }
+                        for i in ['name', ]:  # fix required ; let javascript show errors if null
+                            cleaned_dict[i] = item_dict.get(i, None)
+                        for i in ['sku', 'category', 'price', 'quantity']:
+                            if i in item_dict:
+                                v = item_dict[i]
+                                cleaned_dict[i] = str(v) if v is not None else None
+                        _formatted = u"""ga('ecommerce:addItem',%s)""" % json.dumps(cleaned_dict)
+                        script.append(_formatted)
+            script.append(u"""ga('ecommerce:send');""")
+
+        else:
+            if self.data_struct['*transaction_items']:
+                log.error('no transaction registered, but transaction_items added')
+                
+                
+        # events
+        # ga('send', 'event', 'category', 'action', 'opt_label', opt_value, {'nonInteraction': 1});
+        _events = []
+        for _event_dict in self.data_struct['*tracked_events']:
+            _event_args = []
+            # the `_trackEvent` api expects the args in this order. render 'undefined'
+            for field in ['category', 'action', 'opt_label', 'opt_value', ]:
+                if field in _event_dict:
+                    _value = _event_dict[field]
+                    if _value is not None:
+                        _value = "'%s'" % _value
+                else:
+                    _value = u"undefined"
+                _event_args.append(_value)
+            if 'opt_noninteraction' in _event_dict:
+                _value = int(bool(_event_dict.get('opt_noninteraction')))
+                fieldsObject = u"{'nonInteraction':%s}" % _value
+                _event_args.append(fieldsObject)
+            _events.append(u"""ga('send','event',%s);""" % ','.join(_event_args))
+        if _events:
+            script.extend(_events)
+
+        return script
+
+    def _render__analytics(self, async=None):
+        script = []
+        if self._use_comments:
+            script.append(u"""<!-- Google Analytics -->""")
+        script.append(u"""<script type="text/javascript">""")
+        script.append(u"""\
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');""")
+
+        account_id = self.data_struct['*account_id']
+        script = self._render__analytics_inner(script, account_id)
+
+
+
+        script.append(u"""</script>""")
+        if self._use_comments:
+            script.append('<!-- End Google Analytics -->')
+        return u"""\n""".join(script)
+
+    def render(self, mode=None):
+        """
+        helper function. prints out GA code for you, in the right order.
+
+        You'd probably call it like this in a Mako template:
+            <head>
+                ${h.render()|n}
+            </head>
+
+        Notice that you have to escape under Mako.
+        For more information on mako escape options - http://www.makotemplates.org/docs/filtering.html
+        """
+        if (mode is not None) and (mode not in AnalyticsMode._valid_modes):
+            raise ValueError("invalid mode")
+        mode = mode if mode is not None else self._mode
+
+
+        if mode == AnalyticsMode.GA_JS:
+            return self._render__ga_js()
+        elif mode == AnalyticsMode.ANALYTICS:
+            return self._render__analytics(async=True)
+
+        return '<!-- unsupported AnalyticsMode -->'
+        # -----
+
+
+
+
+
+
+
+        single_push = self.data_struct['*single_push']
+        nested_script = []
+
+        script = []
+        if self._use_comments:
+            script.append(u"""<!-- Google Analytics -->""")
+        script.append(u"""<script type="text/javascript">""")
+        if self._use_analytics:
+            script.append(TEMPLATE_analytics_js)
+        if self._use_analytics_async:
+            script.append(TEMPLATE_analytics_js_async)
+
+        # close the single push if we elected
+        if single_push:
+            script.append(u""",\n""".join(nested_script))
+            script.append(u""");""")
+        script.append(u"""</script>""")
+        if self._use_analytics_async:
+            script.append(TEMPLATE_analytics_js_async_end)
+        if self._use_comments:
+            script.append('<!-- End Google Analytics -->')
 
         return u"""\n""".join(script)
+
+
+__all__ = ('AnalyticsWriter',
+           'AnalyticsMode',
+           )

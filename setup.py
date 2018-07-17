@@ -19,17 +19,16 @@ requires = [
 
 setup(
     name="gaq_hub",
-    version="0.1.1",
+    version="0.2.0",
     description="Lightweight Google Analytics support",
     long_description=README,
     classifiers=[
         "Intended Audience :: Developers",
-        "Framework :: Pylons",
         "Framework :: Pyramid",
         "Programming Language :: Python",
         "License :: OSI Approved :: MIT License",
     ],
-    keywords="web pylons",
+    keywords="web pyramid google analytics",
     author="Jonathan Vanasco",
     author_email="jonathan@findmeon.com",
     url="https://github.com/jvanasco/gaq_hub",

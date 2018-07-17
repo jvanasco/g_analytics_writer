@@ -47,5 +47,5 @@ setup(
     zip_safe=False,
     tests_require = requires,
     install_requires = requires,
-    test_suite="tests",
+    test_suite="g_analytics_writer.tests",
 )

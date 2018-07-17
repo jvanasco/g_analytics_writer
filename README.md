@@ -87,7 +87,7 @@ the pyramid helpers simply manage a AnalyticsWriter object in the request.gaq na
 		def main(global_config, **settings):
 			...
 			# custom gaq
-			config.include("g_analytics_writer.pyramid_helpers")
+			config.include("g_analytics_writer.pyramid_integration")
 
 
 ## When you want to set a custom variable , or anything similar...

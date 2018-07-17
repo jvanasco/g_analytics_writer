@@ -2,7 +2,7 @@ from __future__ import print_function
 
 from g_analytics_writer import AnalyticsWriter
 from g_analytics_writer import AnalyticsMode
-# import g_analytics_writer.pyramid_helpers
+# import g_analytics_writer.pyramid_integration
 
 # core testing facility
 import unittest

@@ -29,21 +29,24 @@ Every command has extensive docstrings, which also include, credit, and link to 
 # Supported Concepts & Commands
 
 * Core
-** _setAccount
+* SetAccount and reporting into multiple domains
 * Multiple Domain Tracking
 * Custom Variables
 * eCommerce
 * Event Tracking
-* _trackEvent
+* Session Unification/userId (ga.js only)
 
 # History
 
 this pacakge replaces the following packages,
 
-    * gaq_hub - https://github.com/jvanasco/gaq_hub
-    which, in turn, replaced
-		* pyramid_gaq - https://github.com/jvanasco/pyramid_gaq
-		* pylons_gaq  - https://github.com/jvanasco/pylons_gaq | pylons support was ended in the 0.2.0 release
+* gaq_hub
+** https://github.com/jvanasco/gaq_hub
+** gaq_hub supported ga.js
+** tags in this repository UNDER 0.2 are the old gaq_hub codebase
+** gaq_hub, replaced
+*** pyramid_gaq - https://github.com/jvanasco/pyramid_gaq
+*** pylons_gaq  - https://github.com/jvanasco/pylons_gaq | pylons support was ended in the 0.2.0 release
 
 
 # QuickStart

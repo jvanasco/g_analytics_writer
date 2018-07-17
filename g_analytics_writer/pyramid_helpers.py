@@ -11,14 +11,14 @@ def includeme(config):
     """
 
     config_settings = config.get_settings()
-    account_id = config_settings.get('analytics_writer.account_id')
-    mode = int(config_settings.get('analytics_writer.mode', 0))
+    account_id = config_settings.get('g_analytics_writer.account_id')
+    mode = int(config_settings.get('g_analytics_writer.mode', 0))
     if mode not in AnalyticsMode._valid_modes:
         raise ValueError("Invalid AnalyticsMode for AnalyticsWriter")
     single_push = None
     if mode in AnalyticsMode._supports_single_push:
-        single_push = bool(int(config_settings.get('analytics_writer.single_push', 0)))
-    use_comments = bool(int(config_settings.get('analytics_writer.use_comments', 0)))
+        single_push = bool(int(config_settings.get('g_analytics_writer.single_push', 0)))
+    use_comments = bool(int(config_settings.get('g_analytics_writer.use_comments', 0)))
 
     def _new_AnalyticsWriter(request):
         """simply creates a new hub"""
@@ -29,6 +29,6 @@ def includeme(config):
                                )
 
     config.add_request_method(_new_AnalyticsWriter,
-                              'analytics_writer',
+                              'g_analytics_writer',
                               reify=True,
                               )

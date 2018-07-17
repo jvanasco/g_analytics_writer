@@ -2,7 +2,7 @@ Portions of the docstrings were authord by, and remain copyright by Google, Inc.
 
 The code is licensed as follows:
 
-Copyright (c) 2012, Jonathan Vanasco <jonathan@findmeon.com>
+Copyright (c) 2012-2018, Jonathan Vanasco <jonathan@findmeon.com>
 
 MIT License -- http://www.opensource.org/licenses/mit-license
 

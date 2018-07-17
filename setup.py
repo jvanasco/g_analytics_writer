@@ -1,7 +1,8 @@
-"""gaq_helper installation script.
+"""
+g_analytics_writer installation script.
 """
 import os
-
+import re
 from setuptools import setup
 from setuptools import find_packages
 
@@ -13,28 +14,34 @@ try:
 except:
     pass
 
-requires = [
-    "metadata_utils >=0.0.2",
-]
+# store version in the init.py
+with open(os.path.join(os.path.dirname(__file__),
+                       'g_analytics_writer',
+                       '__init__.py'
+                       )
+          ) as v_file:
+    VERSION = re.compile(
+        r".*__VERSION__ = '(.*?)'",
+        re.S).match(v_file.read()).group(1)
+
+requires = ["metadata_utils>=0.0.2",
+            ]
 
 setup(
-    name="gaq_hub",
-    version="0.1.1",
+    name="g_analytics_writer",
+    version=VERSION,
     description="Lightweight Google Analytics support",
     long_description=README,
-    classifiers=[
-        "Intended Audience :: Developers",
-        "Framework :: Pylons",
-        "Framework :: Pyramid",
-        "Programming Language :: Python",
-        "License :: OSI Approved :: MIT License",
-    ],
-    keywords="web pylons",
+    classifiers=["Intended Audience :: Developers",
+                 "Framework :: Pyramid",
+                 "Programming Language :: Python",
+                 "License :: OSI Approved :: MIT License",
+                 ],
+    keywords="web pyramid google analytics",
     author="Jonathan Vanasco",
     author_email="jonathan@findmeon.com",
-    url="https://github.com/jvanasco/gaq_hub",
+    url="https://github.com/jvanasco/g_analytics_writer",
     license="MIT",
-    py_modules=['gaq_hub'],
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,

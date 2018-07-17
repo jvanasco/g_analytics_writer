@@ -98,15 +98,12 @@ class AnalyticsWriter(object):
             '*single_push': single_push,
             '*account_id': account_id,
             '*additional_accounts': set({}),
-
             '*tracked_events': [],
-
             '*custom_variables': {},
             '*transaction': {},  # dict of k/v by transactionId
             '*transaction_items': {},  # dict of k:LIST by transactionId
-
             '*crossdomain_tracking': None,
-
+            '*user_id': None,
         }
 
     def set_account(self, account_id):
@@ -204,11 +201,42 @@ class AnalyticsWriter(object):
         """
         ga.js
             renders onclick
+        analytics.js
+            ANALYTICS loads a plugin which automates setting up the onclick events via javascript
         """
         if self._mode == AnalyticsMode.GA_JS:
             # should this compare to the domain?
             return '''onclick="_gaq.push(['_link','%s']); return false;"''' % link
-        # ANALYTICS loads a plugin which automates the above using javascript
+        return ''
+    
+    def set_user_id(self, user_id):
+        """
+        ga.js - may not be supported
+        analytics.js - supported
+        """
+        self.data_struct['*user_id'] = user_id
+
+    def setrender_user_id(self, user_id):
+        """
+        used if the user_id wasn't set during setup
+        google analytics
+            // At a later time, once the `userId` value is known,
+            // sets the value on the tracker.
+            // Setting the userId doesn't send data to Google Analytics.
+            // You must also use a pageview or event to send the data.
+        """
+        self.data_struct['*user_id'] = user_id
+        if self._mode == AnalyticsMode.ANALYTICS:
+            payload = []
+            payload.append("""ga('set','userId','%s');""" % user_id)
+            payload.append("""ga('send','event','authentication','user-id available');""")
+            for (secondary_account, account_id) in enumerate(self.data_struct['*additional_accounts']):
+                (secondary_account_name,
+                 tracker_prefix
+                 ) = generate_tracker_name(secondary_account)
+                payload.append("""ga('%sset','userId','%s');""" % (tracker_prefix, user_id))
+                payload.append("""ga('%ssend','event','authentication','user-id available');""" % tracker_prefix)
+            return '\n'.join(payload)
         return ''
 
     def add_transaction(self, track_dict):
@@ -639,6 +667,8 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         create_args = {}
         if self.data_struct['*crossdomain_tracking']:
             create_args['allowLinker'] = True
+        if self.data_struct['*user_id']:
+            create_args['userId'] = self.data_struct['*user_id']
         
         (secondary_account_name,
          tracker_prefix

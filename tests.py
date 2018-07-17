@@ -13,7 +13,7 @@ re_refresh_15 = re.compile('<meta http-equiv="refresh" content="15"/>')
 re_other_charset = re.compile('<meta charset="utf8"/>')
 
 # used for writing tests
-PRINT_RENDERS = False
+PRINT_RENDERS = 0
 
 # pyramid testing requirements
 # from pyramid import testing
@@ -29,6 +29,19 @@ class CoreTests(object):
 
     mode = None
     _test_single_push = None
+    
+    def test_pageview(self):
+        writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
+        as_html = writer.render()
+        if PRINT_RENDERS:
+            print(as_html)
+        self.assertEqual(as_html, self.data__test_pageview__html)
+
+        writer.set_account_additional__add('UA-123123-3')
+        as_html = writer.render()
+        if PRINT_RENDERS:
+            print(as_html)
+        self.assertEqual(as_html, self.data__test_pageview_multi__html)
 
     def test_multiple_accounts(self):
         """
@@ -182,6 +195,35 @@ class CoreTests(object):
             print(as_html)
         self.assertEqual(as_html, self.data__test_advanced_single_push__html)
 
+    def test_userid_prerender(self):
+        writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
+        writer.set_user_id('cecil')
+        as_html = writer.render()
+        if PRINT_RENDERS:
+            print(as_html)
+        self.assertEqual(as_html, self.data__test_userid_prerender__html)
+
+        # multiple accounts
+        writer.set_account_additional__add('UA-123123-3')
+        as_html = writer.render()
+        if PRINT_RENDERS:
+            print(as_html)
+        self.assertEqual(as_html, self.data__test_userid_prerender_multi__html)
+
+    def test_userid_postrender(self):
+        writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
+        as_html = writer.setrender_user_id('cecil')
+        if PRINT_RENDERS:
+            print(as_html)
+        self.assertEqual(as_html, self.data__test_userid_postrender__html)
+
+        # multiple accounts
+        writer.set_account_additional__add('UA-123123-3')
+        as_html = writer.setrender_user_id('cecil')
+        if PRINT_RENDERS:
+            print(as_html)
+        self.assertEqual(as_html, self.data__test_userid_postrender_multi__html)
+
 
 # global dicts used for tests
 # this lets us compare the different formats
@@ -238,6 +280,34 @@ class TestGA(CoreTests, unittest.TestCase):
     data__custom_variables = data__custom_variables__GA
     data__event_good_1 = data__event_1__GA
     data__event_good_2 = data__event_2__GA
+    data__test_pageview__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+var _gaq = _gaq || [];
+_gaq.push(['_setAccount','UA-123123-1']);
+_gaq.push(['_trackPageview']);
+(function() {
+var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
+var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+</script>
+<!-- End Google Analytics -->"""
+    data__test_pageview_multi__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+var _gaq = _gaq || [];
+_gaq.push(['_setAccount','UA-123123-1']);
+_gaq.push(['_trackPageview']);
+_gaq.push(['trkr0._setAccount','UA-123123-3']);
+_gaq.push(['trkr0._trackPageview']);
+(function() {
+var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
+var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+</script>
+<!-- End Google Analytics -->"""
     data__test_multiple_accounts__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -457,7 +527,10 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 })();
 </script>
 <!-- End Google Analytics -->"""
-
+    data__test_userid_prerender__html = data__test_pageview__html
+    data__test_userid_prerender_multi__html = data__test_pageview_multi__html
+    data__test_userid_postrender__html = ''
+    data__test_userid_postrender_multi__html = ''
 
 class TestAnalytics(CoreTests, unittest.TestCase):
     mode = AnalyticsMode.ANALYTICS
@@ -467,6 +540,30 @@ class TestAnalytics(CoreTests, unittest.TestCase):
     data__custom_variables = data__custom_variables__ANALYTICS
     data__event_good_1 = data__event_1__GA
     data__event_good_2 = data__event_2__GA
+    data__test_pageview__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-123123-1','auto');
+ga('send','pageview');
+</script>
+<!-- End Google Analytics -->"""
+    data__test_pageview_multi__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-123123-1','auto');
+ga('send','pageview');
+ga('create','UA-123123-3','auto','trkr0');
+ga('trkr0.send','pageview');
+</script>
+<!-- End Google Analytics -->"""    
     data__test_multiple_accounts__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -614,3 +711,35 @@ ga('trkr1.send','event','Videos','Play','action','47',{'nonInteraction':1});
 ga('trkr1.send','event','Videos','Play','action','47',{'nonInteraction':0});
 </script>
 <!-- End Google Analytics -->"""
+    data__test_userid_prerender__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-123123-1','auto',{"userId":"cecil"});
+ga('send','pageview');
+</script>
+<!-- End Google Analytics -->"""
+    data__test_userid_prerender_multi__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-123123-1','auto',{"userId":"cecil"});
+ga('send','pageview');
+ga('create','UA-123123-3','auto','trkr0',{"userId":"cecil"});
+ga('trkr0.send','pageview');
+</script>
+<!-- End Google Analytics -->"""
+    data__test_userid_postrender__html = """\
+ga('set','userId','cecil');
+ga('send','event','authentication','user-id available');"""
+    data__test_userid_postrender_multi__html = """\
+ga('set','userId','cecil');
+ga('send','event','authentication','user-id available');
+ga('trkr0.set','userId','cecil');
+ga('trkr0.send','event','authentication','user-id available');"""

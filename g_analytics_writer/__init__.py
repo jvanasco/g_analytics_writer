@@ -145,13 +145,14 @@ class AnalyticsWriter(object):
         """
         self.data_struct['*tracked_events'].append(track_dict)
 
-    def set_custom_variable(self, index, value, name=None, opt_scope=None):
+    def set_custom_variable(self, index, name, value, opt_scope=None):
         """
-        IMPORTANT.
+        IMPORTANT!!!
 
-        Note the following design decision:
-            VALUE is required
-            NAME is not, and comes after VALUE
+        Note the following distinction:
+        * VALUE is required, NAME is not
+        * Name can be passed in as "None" on `analytics.js` installs
+        HOWEVER it is recommended that you pass in the Name
 
         There are slight differences in how this is handled:
 
@@ -178,12 +179,17 @@ class AnalyticsWriter(object):
 
             there are up to 20 dimeneions
 
-            names are configured on the admin as "dimensions"
+            name+scope combos are configured on the admin as "dimensions"
 
-            ga('set','dimension1','Paid');
+            they are then set into the tracker instance as the dimention
+
+                ga('set','dimension1','Paid');
+    
+            or they are sent in as pagedata
+                ga('send','pageview',{"dimension1":"Paid"});            
         """
-        self.data_struct['*custom_variables'][index] = (value,
-                                                        name if name else '',
+        self.data_struct['*custom_variables'][index] = (name,
+                                                        value,
                                                         opt_scope,
                                                         )
 
@@ -506,12 +512,11 @@ class AnalyticsWriter(object):
         for index in sorted(self.data_struct['*custom_variables'].keys()):
             # for ga.js:
             # index == str(integer)
-            # _payload == (value, name, opt_scope)
-            # however... we want to send (name, value, opt_scope)
+            # _payload == (name, value, opt_scope)
             _payload = self.data_struct['*custom_variables'][index]
             if not _payload:
                 continue
-            _payload = (tracker_prefix, index, _payload[1], _payload[0], _payload[2], )
+            _payload = (tracker_prefix, index, _payload[0], _payload[1], _payload[2], )
             if _payload[4]:
                 formatted = u"""['%s_setCustomVar',%s,'%s','%s',%s]""" % _payload
             else:
@@ -714,12 +719,12 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         for index in sorted(self.data_struct['*custom_variables'].keys()):
             # for ga.js:
             # index == str(integer)
-            # payload == (value, name, opt_scope)
-            # however... we only send the VALUE, because name+opt_scope are handled on the admin dashboard
+            # payload == (name, value, opt_scope)
+            # however... we only need send the VALUE, because name+opt_scope are handled on the admin dashboard
             _payload = self.data_struct['*custom_variables'][index]
             if not _payload:
                 continue
-            pagehit_data[index] = _payload[0]  # value
+            pagehit_data[index] = _payload[1]  # value
 
         # pageview
         # ga('send', 'pageview');

@@ -150,8 +150,8 @@ class CoreTests(object):
 
     def test_custom_variables(self):
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
-        (index, value, name, opt_scope) = self.data__custom_variables
-        writer.set_custom_variable(index, value, name=name, opt_scope=opt_scope)
+        (index, name, value, opt_scope) = self.data__custom_variables
+        writer.set_custom_variable(index, name, value, opt_scope=opt_scope)
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
@@ -159,13 +159,13 @@ class CoreTests(object):
 
     def test_advanced(self):
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
-        (index, value, name, opt_scope) = self.data__custom_variables
+        (index, name, value, opt_scope) = self.data__custom_variables
         # crossdomain
         writer.set_crossdomain_tracking('foo.example.com')
         # add account
         writer.set_account_additional__add('UA-123123-2')
         writer.set_account_additional__add('UA-123123-3')
-        writer.set_custom_variable(index, value, name=name, opt_scope=opt_scope)
+        writer.set_custom_variable(index, name, value, opt_scope=opt_scope)
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
         writer.add_transaction(self.data__transaction_dict_good)
@@ -179,13 +179,13 @@ class CoreTests(object):
         if not self._test_single_push:
             raise unittest.SkipTest("single_push not tested on %s" % self.__class__.__name__)
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode, single_push=True)
-        (index, value, name, opt_scope) = self.data__custom_variables
+        (index, name, value, opt_scope) = self.data__custom_variables
         # crossdomain
         writer.set_crossdomain_tracking('foo.example.com')
         # add account
         writer.set_account_additional__add('UA-123123-2')
         writer.set_account_additional__add('UA-123123-3')
-        writer.set_custom_variable(index, value, name=name, opt_scope=opt_scope)
+        writer.set_custom_variable(index, name, value, opt_scope=opt_scope)
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
         writer.add_transaction(self.data__transaction_dict_good)
@@ -267,8 +267,8 @@ data__event_2__GA = {
     'opt_value': 47,
     'opt_noninteraction': None
     }
-data__custom_variables__GA = (6, 'jonathan', 'author', 1, ) # index, value, name=None, opt_scope=None)
-data__custom_variables__ANALYTICS = ('dimension9', 'jonathan', None, None, ) # index, value, name=None, opt_scope=None)
+data__custom_variables__GA = (6, 'author', 'jonathan', 1, ) # index, name, value, opt_scope=None)
+data__custom_variables__ANALYTICS = ('dimension9', None, 'jonathan', None, ) # index, name, value, opt_scope=None)
 
                
 class TestGA(CoreTests, unittest.TestCase):

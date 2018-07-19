@@ -7,8 +7,15 @@ It offers a AnalyticsWriter object, which offers a standard API to multiple Goog
 * ga.js (historical format)
 * analytics.js (current)
 * gtag.js (planned)
-	
+
 It also offers helper packages for the pyramid framework, which can automate managing AnalyticsWriter objects
+
+The package is designed to work with MVC/MVT/MCT/etc systems:
+* Python should populate all the tracking data, then render everything at once.
+* Applications should invoke this library with 'what I want to do', and this library will figure out how best to do it.
+
+This is not designed to iteratively generate a tagging, but instead to generate everything at once, as optimized as possible. 
+	
 
 AnalyticsWriter objects simply contain various bits of data in an internal format, and then prints them out in the correct order via a helper functions for each format.
 

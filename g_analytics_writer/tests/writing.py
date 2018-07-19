@@ -13,7 +13,7 @@ re_refresh_15 = re.compile('<meta http-equiv="refresh" content="15"/>')
 re_other_charset = re.compile('<meta charset="utf8"/>')
 
 # used for writing tests
-PRINT_RENDERS = 0
+PRINT_RENDERS = 1
 
 # pyramid testing requirements
 # from pyramid import testing
@@ -120,6 +120,7 @@ class CoreTests(object):
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
+        writer.track_event(self.data__event_good_3)
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
@@ -157,6 +158,12 @@ class CoreTests(object):
             print(as_html)
         self.assertEqual(as_html, self.data__test_custom_variables__html)
 
+        writer.global_custom_data = True
+        as_html_global = writer.render()
+        if PRINT_RENDERS:
+            print(as_html_global)
+        self.assertEqual(as_html_global, self.data__test_custom_variables__global__html)
+
     def test_advanced(self):
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
         (index, name, value, opt_scope) = self.data__custom_variables
@@ -168,12 +175,19 @@ class CoreTests(object):
         writer.set_custom_variable(index, name, value, opt_scope=opt_scope)
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
+        writer.track_event(self.data__event_good_3)
         writer.add_transaction(self.data__transaction_dict_good)
         writer.add_transaction_item(self.data__transaction_item_dict)
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_advanced__html)
+
+        writer.global_custom_data = True
+        as_html_global = writer.render()
+        if PRINT_RENDERS:
+            print(as_html_global)
+        self.assertEqual(as_html_global, self.data__test_advanced__global__html)
     
     def test_advanced_single_push(self):
         if not self._test_single_push:
@@ -188,6 +202,7 @@ class CoreTests(object):
         writer.set_custom_variable(index, name, value, opt_scope=opt_scope)
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
+        writer.track_event(self.data__event_good_3)
         writer.add_transaction(self.data__transaction_dict_good)
         writer.add_transaction_item(self.data__transaction_item_dict)
         as_html = writer.render()
@@ -267,8 +282,13 @@ data__event_2__GA = {
     'opt_value': 47,
     'opt_noninteraction': None
     }
+data__event_3__ANALYTICS_hit = {
+    'category': 'category',
+    'action': 'action',
+    'metric18': 8000,
+}
 data__custom_variables__GA = (6, 'author', 'jonathan', 1, ) # index, name, value, opt_scope=None)
-data__custom_variables__ANALYTICS = ('dimension9', None, 'jonathan', None, ) # index, name, value, opt_scope=None)
+data__custom_variables__ANALYTICS = ('dimension9', 'name', 'jonathan', None, ) # index, name, value, opt_scope=None)
 
                
 class TestGA(CoreTests, unittest.TestCase):
@@ -280,6 +300,7 @@ class TestGA(CoreTests, unittest.TestCase):
     data__custom_variables = data__custom_variables__GA
     data__event_good_1 = data__event_1__GA
     data__event_good_2 = data__event_2__GA
+    data__event_good_3 = data__event_3__ANALYTICS_hit
     data__test_pageview__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -443,6 +464,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 })();
 </script>
 <!-- End Google Analytics -->"""
+    data__test_custom_variables__global__html = data__test_custom_variables__html
     data__test_advanced__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -484,6 +506,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 })();
 </script>
 <!-- End Google Analytics -->"""
+    data__test_advanced__global__html = data__test_advanced__html
     data__test_advanced_single_push__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -540,6 +563,7 @@ class TestAnalytics(CoreTests, unittest.TestCase):
     data__custom_variables = data__custom_variables__ANALYTICS
     data__event_good_1 = data__event_1__GA
     data__event_good_2 = data__event_2__GA
+    data__event_good_3 = data__event_3__ANALYTICS_hit
     data__test_pageview__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -678,6 +702,18 @@ ga('create','UA-123123-1','auto');
 ga('send','pageview',{"dimension9":"jonathan"});
 </script>
 <!-- End Google Analytics -->"""
+    data__test_custom_variables__global__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-123123-1','auto');
+ga('set',{"dimension9":"jonathan"});
+ga('send','pageview');
+</script>
+<!-- End Google Analytics -->"""
     data__test_advanced__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -704,6 +740,42 @@ ga('trkr0.send','event','Videos','Play','action','47',{'nonInteraction':1});
 ga('trkr0.send','event','Videos','Play','action','47',{'nonInteraction':0});
 ga('create','UA-123123-2','auto','trkr1',{"allowLinker":true});
 ga('trkr1.send','pageview',{"dimension9":"jonathan"});
+ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
+ga('trkr1.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('trkr1.ecommerce:send');
+ga('trkr1.send','event','Videos','Play','action','47',{'nonInteraction':1});
+ga('trkr1.send','event','Videos','Play','action','47',{'nonInteraction':0});
+</script>
+<!-- End Google Analytics -->"""
+    data__test_advanced__global__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-123123-1','auto',{"allowLinker":true});
+ga('require','linker');
+ga('linker:autoLink',['foo.example.com']);
+ga('require','ecommerce');
+ga('set',{"dimension9":"jonathan"});
+ga('send','pageview');
+ga('ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
+ga('ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('ecommerce:send');
+ga('send','event','Videos','Play','action','47',{'nonInteraction':1});
+ga('send','event','Videos','Play','action','47',{'nonInteraction':0});
+ga('create','UA-123123-3','auto','trkr0',{"allowLinker":true});
+ga('trkr0.set',{"dimension9":"jonathan"});
+ga('trkr0.send','pageview');
+ga('trkr0.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
+ga('trkr0.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('trkr0.ecommerce:send');
+ga('trkr0.send','event','Videos','Play','action','47',{'nonInteraction':1});
+ga('trkr0.send','event','Videos','Play','action','47',{'nonInteraction':0});
+ga('create','UA-123123-2','auto','trkr1',{"allowLinker":true});
+ga('trkr1.set',{"dimension9":"jonathan"});
+ga('trkr1.send','pageview');
 ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
 ga('trkr1.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
 ga('trkr1.ecommerce:send');
@@ -743,3 +815,159 @@ ga('set','userId','cecil');
 ga('send','event','authentication','user-id available');
 ga('trkr0.set','userId','cecil');
 ga('trkr0.send','event','authentication','user-id available');"""
+
+
+class TestGtag(CoreTests, unittest.TestCase):
+    """
+    python -munittest g_analytics_writer.tests.writing.TestGtag.test_track_event
+
+    python -munittest g_analytics_writer.tests.writing.TestGtag
+    python -munittest g_analytics_writer.tests.writing.TestGtag.test_advanced
+    python -munittest g_analytics_writer.tests.writing.TestGtag.test_crossdomain
+    """
+    mode = AnalyticsMode.GTAG
+    data__transaction_dict_good = data__transaction_dict_Analytics
+    data__transaction_dict_bad = data__transaction_dict_GA
+    data__transaction_item_dict = data__transaction_item_dict
+    data__custom_variables = data__custom_variables__ANALYTICS
+    data__event_good_1 = data__event_1__GA
+    data__event_good_2 = data__event_2__GA
+    data__event_good_3 = data__event_3__ANALYTICS_hit
+    data__test_pageview__html = """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1');
+</script>
+<!-- End Google Analytics -->"""
+    data__test_pageview_multi__html = """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1');
+gtag('config','UA-123123-3');
+</script>
+<!-- End Google Analytics -->"""
+    data__test_multiple_accounts__html = """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-2');
+gtag('config','UA-123123-3');
+</script>
+<!-- End Google Analytics -->"""
+    data__test_comments__html_comments ="""\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1');
+</script>
+<!-- End Google Analytics -->"""
+    data__test_comments__html_nocomments ="""\
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1');
+</script>"""
+    data__test_transaction_good__html ="""\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1');
+gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00","id":"1234","quantity":"1"}],"tax":"10.00","value":"115.00","affiliation":"analytics.js","shipping":"5.00","transaction_id":"1234"}
+</script>
+<!-- End Google Analytics -->"""
+    data__test_transaction_bad__html ="""\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1');
+gtag('event', 'purchase', {"affiliation":"ga.js","tax":"10.00","shipping":"5.00","transaction_id":"1234","items":[{"category":"Green Medium","price":"100.00","id":"1234","quantity":"1"}]}
+</script>
+<!-- End Google Analytics -->"""
+    data__test_crossdomain__html =""""""
+    data__test_crossdomain__html_multi =""""""
+    data__test_track_event__html = """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1');
+gtag('event', 'Play', {"non_interaction":true,"event_label":"action","event_category":"Videos","value":"47"}
+gtag('event', 'Play', {"non_interaction":false,"event_label":"action","event_category":"Videos","value":"47"}
+</script>
+<!-- End Google Analytics -->"""
+    data__test_crossdomain__html_link_attrs = ''  # empty string
+    data__test_custom_variables__html = """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
+gtag('event','pageview',{"name":"jonathan"});
+</script>
+<!-- End Google Analytics -->"""
+    data__test_custom_variables__global__html = data__test_custom_variables__html
+    data__test_advanced__html = """"""
+    data__test_advanced__global__html = data__test_advanced__html
+    data__test_userid_prerender__html ="""\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1',{"user_id":"cecil"});
+</script>
+<!-- End Google Analytics -->"""
+    data__test_userid_prerender_multi__html = """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1',{"user_id":"cecil"});
+gtag('config','UA-123123-3',{"user_id":"cecil"});
+</script>
+<!-- End Google Analytics -->"""
+    data__test_userid_postrender__html = """\
+gtag('config', 'UA-123123-1', {'user_id': 'cecil'});"""
+    data__test_userid_postrender_multi__html = """\
+gtag('config', 'UA-123123-1', {'user_id': 'cecil'});
+gtag('config', 'UA-123123-3', {'user_id': 'cecil'});"""

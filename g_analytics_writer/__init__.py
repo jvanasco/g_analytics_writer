@@ -1,4 +1,5 @@
 from json import dumps as json_dumps
+import pdb
 
 
 # logging
@@ -28,6 +29,32 @@ def cleanup_js_dict_to_quoted(a_dict):
             v = "'%s'" % v  # wrap in single quotes
         copied_dict[k] = v
     return copied_dict
+
+
+def source_dict_to_args(source_dict, args_order, remove_undefined=None):
+    item_args = []
+    for _field in args_order:
+        _value = source_dict.get(_field, None)
+        if _value is None:
+            _value = 'undefined' # yo it's undefined
+        elif type(_value) in (int, float):
+            _value = "%s" % _value  # turn it into a string
+        elif type(_value) is bool:
+            _value = ("%s" % _value).lower()  # turn it into a string
+        else:
+            _value = "'%s'" % _value  # pop it in a quote
+        item_args.append(_value)
+    if remove_undefined:
+        _max_defined = None
+        for _idx, _value in enumerate(item_args):
+            if _value != 'undefined':
+               _max_defined = _idx
+        if _max_defined is not None:
+            item_args = item_args[:_max_defined+1]
+        else:
+            # TODO: log/error
+            item_args = []
+    return item_args
 
 
 def itemDict_to_transactionId(itemDict):
@@ -67,99 +94,15 @@ class AnalyticsMode(object):
     _ANALYTICS_fieldobject = 'fo'  # used as a unique value in `transaction_mapping`
 
 
-transaction_mapping = {
-    '*transaction': [{AnalyticsMode.GA_JS: 'transactionId',
-                      AnalyticsMode.ANALYTICS: 'id',
-                      AnalyticsMode.GTAG: 'transaction_id',
-                      '_skip': True,
-                      },
-                     {AnalyticsMode.GA_JS: None,
-                      AnalyticsMode.ANALYTICS: 'revenue',
-                      AnalyticsMode.GTAG: 'value',
-                      },
-                     {AnalyticsMode.GA_JS: None,
-                      AnalyticsMode.ANALYTICS: 'list',
-                      AnalyticsMode.GTAG: 'list_name',
-                      },
-                     {AnalyticsMode.GA_JS: None,
-                      AnalyticsMode.ANALYTICS: 'step',
-                      AnalyticsMode.GTAG: 'checkout_step',
-                      },
-                     {AnalyticsMode.GA_JS: None,
-                      AnalyticsMode.ANALYTICS: 'option',
-                      AnalyticsMode.GTAG: 'checkout_option',
-                      },
-                     ],
-    '*transaction_items': [{AnalyticsMode.GA_JS: None,
-                            AnalyticsMode.ANALYTICS: 'sku',
-                            AnalyticsMode.GTAG: 'id',
-                            },
-                           ],
-    '*event': [{AnalyticsMode.GA_JS: None,
-                AnalyticsMode.ANALYTICS: 'category',
-                AnalyticsMode._ANALYTICS_fieldobject: 'eventCategory',
-                AnalyticsMode.GTAG: 'event_category',
-                '_is_required': [AnalyticsMode.ANALYTICS, ]
-                },
-               {AnalyticsMode.GA_JS: None,
-                AnalyticsMode.ANALYTICS: 'opt_label',
-                AnalyticsMode._ANALYTICS_fieldobject: 'eventLabel',
-                AnalyticsMode.GTAG: 'event_label',
-                },
-               {AnalyticsMode.GA_JS: None,
-                AnalyticsMode.ANALYTICS: 'opt_value',
-                AnalyticsMode._ANALYTICS_fieldobject: 'eventValue',
-                AnalyticsMode.GTAG: 'value',
-                },
-               {AnalyticsMode.GA_JS: 'nonInteraction',
-                AnalyticsMode.ANALYTICS: 'opt_noninteraction',
-                AnalyticsMode._ANALYTICS_fieldobject: 'nonInteraction',
-                AnalyticsMode.GTAG: 'non_interaction',
-                },
-               ],
-
-}
-
-
-def remappable_action_fields(action, action_dict, target_platform):
+class InvalidTag(Exception):
     """
-    returns a list of alternate items in an action_dict
+    Base exception for invalid tags.
+    A global instance of `INVALID_TAG` will be created and used for comparisons
     """
-    # we'll return tuples
-    # each tuple should be (destination_key, source_key)
-    returnlist = []
+    pass
 
-    # allowable sources?
-    alternate_platforms = []
-    if target_platform == AnalyticsMode.GTAG:
-        alternate_platforms.append(AnalyticsMode.ANALYTICS)
-        alternate_platforms.append(AnalyticsMode._ANALYTICS_fieldobject)
-    elif target_platform == AnalyticsMode.ANALYTICS:
-        alternate_platforms.append(AnalyticsMode._ANALYTICS_fieldobject)
-        alternate_platforms.append(AnalyticsMode.GTAG)
 
-    # nested function local to our alternate_platforms
-    def _parse_it(preferred_field, action_dict, aliases):
-        if preferred_field in action_dict:
-            return (preferred_field, preferred_field, )
-        for _alt_platform in alternate_platforms:
-            _alt_field = aliases.get(_alt_platform)
-            if _alt_field in action_dict:
-                return (preferred_field, _alt_field, )
-        raise ValueError("Not Found")
-
-    for aliases in transaction_mapping[action]:
-        # explicitly skip some items
-        if aliases.get('_skip'):
-            continue
-
-        preferred_field = aliases.get(target_platform)
-        try:
-            returnlist.append(_parse_it(preferred_field, action_dict, aliases))
-        except:
-            pass
-
-    return returnlist
+INVALID_TAG = InvalidTag()
 
 
 # ==============================================================================
@@ -283,37 +226,122 @@ class AnalyticsWriter(object):
     def track_event(self, track_dict):
         """
         The tracking dict should be in this format:
-        {'*category': the category
-         '*action': the action
-         '*label': the label
-        }
+            {'*category': the category
+             '*action': the action
+            }
+        Notice the leading asterisk `*` on certain keys. An asterisk is the
+        prefix for identifying `g_analytics_writer` native commands. These keys
+        will be mapped onto relevant Google Analytics fields upon rendering.
+
+        Keys without an prefixed asterisk will be interpreted as extra data to
+        be submitted by fieldobjects or other methods.
+
+        =========================================================================
+        Chart of translated items
+        *** note: items in this chart with a leading `{` are fieldObject keys ***
+        *** note: other items are args ***
+        =========================================================================
+        native           | ga.js              | analytics.js    | gtag.js
+        -----------------+--------------------+-----------------+-----------------
+        *action          | action             | {eventAction    | action/"event name"
+        *category        | category           | {eventCategory  | {event_category
+        *label           | opt_label          | {eventLabel     | {event_label
+        *value           | opt_value          | {eventValue     | {value
+        *non_interaction | opt_noninteraction | {nonInteraction | non_interaction
+        -----------------+--------------------+-----------------+-----------------
+        `non_interaction` must be a boolean.
+        other values will be rendered as-is.
+        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        Platform Version Notes:
         
+        gtag.js:
+            * `category` is OPTIONAL
+            * each default `action` has a default `category`
+            * each default `action` *might* have a default `label`
+            * custom events (`action``) have a default `category` of 'engagement' and a default `label` of 'not set'.
+
+        ========================================================================
+
+        Upstream Documentation
+
+        gtag.js
+            https://developers.google.com/analytics/devguides/collection/gtagjs/events#send_events
+            
+            # example
+            gtag('event', <action>, {
+              'event_category': <category>,
+              'event_label': <label>,
+              'value': <value>
+            });
+
+            # fields reference
+            `<action>` is the string that will appear as the event action in Google Analytics Event reports.
+            `<category>` is the string that will appear as the event category.
+            `<label>` is the string that will appear as the event label.
+            `<value>` is a non-negative integer that will appear as the event value.            
         
-        
-        
-        ga.js
-            _trackEvent(category, action, opt_label, opt_value, opt_noninteraction)
-                String   category The general event category (e.g. "Videos").
-                String   action The action for the event (e.g. "Play").
-                String   opt_label An optional descriptor for the event.
-                Int      opt_value An optional value associated with the event. You can see your event values in the Overview, Categories, and Actions reports, where they are listed by event or aggregated across events, depending upon your report view.
-                Boolean  opt_noninteraction Default value is false. By default, the event hit sent by _trackEvent() will impact a visitor's bounce rate. By setting this parameter to true, this event hit will not be used in bounce rate calculations.
+            only `action` is required
+
+            * user timings have shifted:
+                https://developers.google.com/analytics/devguides/collection/gtagjs/migration
+                analytics.js    | gtag.js
+                ----------------+--------
+                timingValue     | value
+                timingVar       | name
 
         analytics.js
-            # commanline docs
-            ga('send','event','category','action','opt_label', opt_value, {'nonInteraction': 1});
-            
+            https://developers.google.com/analytics/devguides/collection/analyticsjs/events#implementation
+
+            # example
+            ga('send', 'event', [eventCategory], [eventAction], [eventLabel], [eventValue], [fieldsObject]);
+
             # fields reference
             https://developers.google.com/analytics/devguides/collection/analyticsjs/field-reference
-            eventCategory - required
-            eventAction - required
-            eventLabel - optional
-            eventValue - optional
-            nonInteraction - optional
-                
+
+            `eventCategory`  - required
+            `eventAction`    - required
+            `eventLabel`     - optional
+            `eventValue`     - optional
+            `nonInteraction` - optional
             
-                
-                
+        ga.js
+            https://developers.google.com/analytics/devguides/collection/gajs/eventTrackerGuide#setting-up-event-tracking
+
+            # example
+            _trackEvent(category, action, opt_label, opt_value, opt_noninteraction)
+            
+            # fields reference
+            `category`            String  The general event category (e.g. "Videos").
+            `action`              String  The action for the event (e.g. "Play").
+            `opt_label`           String  An optional descriptor for the event.
+            `opt_value`           Int     An optional value associated with the event. You can see your event values in the Overview, Categories, and Actions reports, where they are listed by event or aggregated across events, depending upon your report view.
+            `opt_noninteraction`  Boolean Default value is false. By default, the event hit sent by _trackEvent() will impact a visitor's bounce rate. By setting this parameter to true, this event hit will not be used in bounce rate calculations.
+
+        =====
+        Conversion:
+            analytics.js field  |   gtag.js parameter
+            --------------------+-----------------------
+            eventAction         |   event_action
+            eventCategory       |   event_category
+            eventLabel          |   event_label
+            eventValue          |   value
+        analytics js
+            ga('send', 'event', {
+              'eventCategory': 'Category',
+              'eventAction': 'Action'
+            });
+
+           gtag('event', <action>, {
+                'event_category': <category>,
+                'event_label': <label>,
+                'value': <value>
+                 });
+            gtag('event', 'video_auto_play_start', {
+              'event_label': 'My promotional video',
+              'event_category': 'video_auto_play',
+              'non_interaction': true
+            });
+
         """
         self.data_struct['*tracked_events'].append(track_dict)
 
@@ -465,23 +493,36 @@ class AnalyticsWriter(object):
     def add_transaction(self, track_dict):
         """
         IMPORTANT:
-            gtag.js requires this to be configured in the dashboard's view settings
+            gtag.js requires ecommerce to be configured in the dashboard's view settings
 
 
         CORE DIFFERENCES
 
-
-        ga.js                         | analytics.js
-        ------------------------------+------------
-        transactionId                 | id
-        total [excludes tax/shipping] | -
-        -                             | revenue [includes tax/shipping]
-        city                          |
-        state                         |
-        country                       |
-
-        -----
-
+        =========================================================================
+        Chart of translated terms
+        =========================================================================
+        native           | ga.js              | analytics.js    | gtag.js
+        -----------------+--------------------+-----------------+-----------------
+        *id              | transactionId      | id              | transaction_id
+        *affiliation     | . affiliation      | . affiliation   | . affiliation
+        *total           | total              |                 | 
+        *revenue         |                    | . revenue       | . value           
+        *tax             | . tax              | . tax           | . tax
+        *shipping        | . shipping         | . shipping      | . shipping
+        *city            | . city             |                 | 
+        *state           | . state            |                 | 
+        *country         | . country          |                 | 
+        *coupon          |                    | .! coupon       | . coupon
+        *list_name       |                    | .! list         | . list_name
+        *checkout_step   |                    | .! step         | . checkout_step
+        *checkout_option |                    | .! option       | . checkout_option
+        -----------------+--------------------+-----------------+-----------------
+        items with a prefix `.` are optional 
+        items with a prefix `!` require the enhanced ecommerce plugin
+        # important info
+            *total = excludes tax/shipping
+            *revenue = includes tax/shipping
+        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         ga.js   | https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce?csw=1#_gat.GA_Tracker_._addTrans
             _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
@@ -496,6 +537,7 @@ class AnalyticsWriter(object):
 
         analytics.js | https://developers.google.com/analytics/devguides/collection/upgrade/reference/gajs-analyticsjs
                      | https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
+                     | https://developers.google.com/analytics/devguides/collection/analyticsjs/field-reference
 
                 id  text    Yes The transaction ID. (e.g. 1234)
                 affiliation text    No  The store or affiliation from which this transaction occurred (e.g. Acme Clothing).
@@ -578,13 +620,38 @@ class AnalyticsWriter(object):
                 coupon  string  'spring_fun'    Coupon code for a purchasable item
         """
         # stash this into a dict
-        _transaction_id = itemDict_to_transactionId(track_dict)  # transactionId is ga.js; id is analytics.js
+        _transaction_id = track_dict.get('*id', '')
+        if not _transaction_id:
+            raise ValueError("missing `*id`")
+        if _transaction_id != str(_transaction_id):
+            _transaction_id = str(_transaction_id)
+            track_dict['*id'] = _transaction_id
         self.data_struct['*transaction'][_transaction_id] = track_dict
 
-    def add_transaction_item(self, track_dict):
+    def add_transaction_item(self, item_dict):
         """
         IMPORTANT:
-            gtag.js requires this to be configured in the dashboard's view settings
+            gtag.js requires ecommerce to be configured in the dashboard's view settings
+
+
+        =========================================================================
+        Chart of translated terms
+        =========================================================================
+        native           | ga.js              | analytics.js    | gtag.js
+        -----------------+--------------------+-----------------+-----------------
+        *id              | . transactionId    | id              | transaction_id
+        *sku             | sku                | 
+        *name            | name               | 
+        *category        | . category         | 
+        *price           | price              | 
+        *quantity        | quantity           | 
+        -----------------+--------------------+-----------------+-----------------
+        items with a prefix `.` are optional 
+        items with a prefix `!` require the enhanced ecommerce plugin
+        # important info
+            ga.js doesn't require transactionId, but this package does
+        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 
         ga.js   | https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce#_gat.GA_Tracker_._addItem
             _addItem(transactionId, sku, name, category, price, quantity)
@@ -607,10 +674,15 @@ class AnalyticsWriter(object):
               'quantity': '1'                   // Quantity.
             });
         """
-        _transaction_id = itemDict_to_transactionId(track_dict)  # transactionId is ga.js; id is analytics.js
+        _transaction_id = item_dict.get('*transaction_id', '')
+        if not _transaction_id:
+            raise ValueError("missing `*transaction_id`")
+        if _transaction_id != str(_transaction_id):
+            _transaction_id = str(_transaction_id)
+            item_dict['*transaction_id'] = _transaction_id
         if _transaction_id not in self.data_struct['*transaction_items']:
             self.data_struct['*transaction_items'][_transaction_id] = []
-        self.data_struct['*transaction_items'][_transaction_id].append(track_dict)
+        self.data_struct['*transaction_items'][_transaction_id].append(item_dict)
 
     def _render__ga_js__inner(
         self,
@@ -822,80 +894,144 @@ class AnalyticsWriter(object):
         # # _addItem
         # # _trackTrans
         if self.data_struct['*transaction']:
+            # _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
+            # _addItem(transactionId, sku, name, category, price, quantity)
+            _txn_fields_order = ('*id', '*affiliation', '*total', '*tax', '*shipping', '*city', '*state', '*country', )
+            _txn_fields_required = ('*id', '*total', )
+            _txn_fields_optional = ('*affiliation', '*tax', '*shipping', '*city', '*state', '*country', )
+            _item_fields_order = ('*transaction_id', '*sku', '*name', '*category', '*price', '*quantity', )
+            _item_fields_required = ('*transaction_id', '*sku', '*name', '*price', '*quantity', )
+            _item_fields_optional = ('*category', )
+
+            _valid_transactions = False
             for transaction_id in self.data_struct['*transaction'].keys():
-                # _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
-                transaction_dict = self.data_struct['*transaction'][transaction_id]
-                # these two fields are REQUIRED
-                for i in ['transactionId', 'total']:  # fix required ; let javascript show errors if null
-                    if i not in transaction_dict:
-                        log.error('transaction field is missing: %s', i)
-                        transaction_dict[i] = None
-                for i in ['affiliation', 'tax', 'shipping', 'city', 'state', 'country']:  # fix optionals before positioning
-                    if i not in transaction_dict:
-                        transaction_dict[i] = None
-                cleaned_dict = cleanup_js_dict_to_quoted(transaction_dict)
-                cleaned_dict['_tracker_prefix'] = tracker_prefix
-                _formatted = """['%(_tracker_prefix)s_addTrans',%(transactionId)s,%(affiliation)s,%(total)s,%(tax)s,%(shipping)s,%(city)s,%(state)s,%(country)s]""" % cleaned_dict
+                _transaction_dict = self.data_struct['*transaction'][transaction_id]
+                try:
+                    for _field in _txn_fields_required:
+                        _value = _transaction_dict.get(_field, None)
+                        if _value is None:
+                            raise InvalidTag()
+                except Exception:
+                    _formatted = '/* invalid transaction */'
+                    if _single_push:
+                        nested_script.append(_formatted)
+                    else:
+                        script.append(u"""_gaq.push(%s);""" % _formatted)
+                    continue
+                _transaction_args = source_dict_to_args(_transaction_dict, _txn_fields_order, remove_undefined=True)
+                _formatted = """['%(tracker_prefix)s_addTrans',%(joined_args)s]""" % {'tracker_prefix': tracker_prefix,
+                                                                                     'joined_args': ','.join(_transaction_args)
+                                                                                     }
                 if _single_push:
                     nested_script.append(_formatted)
                 else:
                     script.append(u"""_gaq.push(%s);""" % _formatted)
 
+                _valid_transactions = True
+
                 if transaction_id in self.data_struct['*transaction_items']:
-                    for item_dict in self.data_struct['*transaction_items'][transaction_id]:
-                        # _addItem(transactionId, sku, name, category, price, quantity)
-                        cleaned_dict = {'transactionId': transaction_id, }
-                        # _transaction_id = itemDict_to_transactionId(item_dict)  # transactionId is ga.js; id is analytics.js
-                        # this is impossible due to how we store it
-                        # if transaction_id != _transaction_id:
-                        #    log.error("transaction id does not match")
-                        for i in ['sku', 'name', 'category', 'price', 'quantity', ]:  # fix required ; let javascript show errors if null
-                            if i in item_dict:
-                                cleaned_dict[i] = item_dict[i]
+                    for _item_dict in self.data_struct['*transaction_items'][transaction_id]:
+                        try:
+                            for _field in _item_fields_required:
+                                _value = _item_dict.get(_field, None)
+                                if _value is None:
+                                    raise InvalidTag()
+                        except Exception:
+                            _formatted = '/* invalid transaction item */'
+                            if _single_push:
+                                nested_script.append(_formatted)
                             else:
-                                cleaned_dict[i] = None
-                        cleaned_dict = cleanup_js_dict_to_quoted(cleaned_dict)
-                        cleaned_dict['_tracker_prefix'] = tracker_prefix
-                        _formatted = """['%(_tracker_prefix)s_addItem',%(transactionId)s,%(sku)s,%(name)s,%(category)s,%(price)s,%(quantity)s]""" % cleaned_dict
+                                script.append(u"""_gaq.push(%s);""" % _formatted)
+                            continue
+
+                        _item_args = source_dict_to_args(_item_dict, _item_fields_order, remove_undefined=True)
+                        _formatted = """['%(tracker_prefix)s_addItem',%(joined_args)s]""" % {'tracker_prefix': tracker_prefix,
+                                                                                             'joined_args': ','.join(_item_args)
+                                                                                             }
                         if _single_push:
                             nested_script.append(_formatted)
                         else:
                             script.append(u"""_gaq.push(%s);""" % _formatted)
 
-            # send the _trackTransaction
-            # https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce?csw=1#_gat.GA_Tracker_._addTrans
-            # Sends both the transaction and item data to the Google Analytics server. This method should be called after _trackPageview(), and used in conjunction with the _addItem() and addTrans() methods. It should be called after items and transaction elements have been set up.
-            if _single_push:
-                nested_script.append(u"""['%s_trackTrans']""" % tracker_prefix)
-            else:
-                script.append(u"""_gaq.push(['%s_trackTrans']);""" % tracker_prefix)
+            if _valid_transactions:
+                # send the _trackTransaction
+                # https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce?csw=1#_gat.GA_Tracker_._addTrans
+                # Sends both the transaction and item data to the Google Analytics server. This method should be called after _trackPageview(), and used in conjunction with the _addItem() and addTrans() methods. It should be called after items and transaction elements have been set up.
+                if _single_push:
+                    nested_script.append(u"""['%s_trackTrans']""" % tracker_prefix)
+                else:
+                    script.append(u"""_gaq.push(['%s_trackTrans']);""" % tracker_prefix)
 
         else:
             if self.data_struct['*transaction_items']:
                 log.error('no transaction registered, but transaction_items added')
 
-        # events are handled in a peculiar way
+        # EVENTS
+        # example: _trackEvent(category, action, opt_label, opt_value, opt_noninteraction)
+        # the `_trackEvent` api expects the args in this order. render 'undefined' if we don't have it.
         _events = []
+        _event_fields_required = ('*category', '*action', )
+        _event_fields_optional = ('*label', '*value', '*non_interaction', )
         for _event_dict in self.data_struct['*tracked_events']:
             _event_args = []
-            # the `_trackEvent` api expects the args in this order. render 'undefined'
-            for field in ['category', 'action', 'opt_label', 'opt_value', 'opt_noninteraction', ]:
-                if field in _event_dict:
-                    _value = _event_dict[field]
-                    if field in ('opt_noninteraction', ):
-                        _value = str(bool(_value)).lower()
-                    else:
-                        _value = "'%s'" % _value
-                else:
-                    _value = "undefined"
-                _event_args.append(_value)
-            _events.append("""['%s_trackEvent',%s]""" % (tracker_prefix, ','.join(_event_args)))
+            _event_args_optional = []
+            # events are expected to be a series of args
+            try:
+                for _field in _event_fields_required:
+                    _value = _event_dict.get(_field)
+                    if not _value:
+                        raise InvalidTag()
+                    _value = "'%s'" % _value  # pop it in a quote
+                    _event_args.append(_value)
+            except:
+                _events.append(INVALID_TAG)
+                continue
+            # figure out the optional args, if any...
+            for _field in _event_fields_optional:
+                # set the value to a default of `None`
+                # don't set it to `undefined` yet.
+                # we need the `None` for tests...
+                _value = _event_dict.get(_field, None)
+                _event_args_optional.append(_value)
+            if _event_args_optional:
+                if all(e is None for e in _event_args_optional):
+                    # reset this
+                    _event_args_optional = []
+                else:    
+                    # upgrade `None` to `"undefined"`, other items are strings
+                    for _idx, _value in enumerate(_event_args_optional):
+                        if _value is None:
+                            _value = 'undefined' # yo it's undefined
+                        elif type(_value) in (int, float):
+                            _value = "%s" % _value  # turn it into a string
+                        elif type(_value) is bool:
+                            _value = ("%s" % _value).lower()  # turn it into a string
+                        else:
+                            _value = "'%s'" % _value  # pop it in a quote
+                        _event_args_optional[_idx] = _value
+                    # remove every 'undefined' from the tail of the list
+                    _max_defined = None
+                    for _idx, _value in enumerate(_event_args_optional):
+                        if _value != 'undefined':
+                           _max_defined = _idx
+                    if _max_defined is not None:
+                        _event_args_optional = _event_args_optional[:_max_defined+1]
+                    else:    
+                        _event_args_optional = []
+            _event_args_all = _event_args + _event_args_optional
+            _events.append("""['%s_trackEvent',%s]""" % (tracker_prefix, ','.join(_event_args_all)))
         if _events:
             for _event in _events:
                 if _single_push:
-                    nested_script.append(_event)
+                    if _event is INVALID_TAG:
+                        nested_script.append("/* _trackEvent: incompatible event */")
+                    else:
+                        nested_script.append(_event)
                 else:
-                    script.append(u"""_gaq.push(%s);""" % _event)
+                    if _event is INVALID_TAG:
+                        script.append("/* _trackEvent: incompatible event */")
+                    else:
+                        script.append(u"""_gaq.push(%s);""" % _event)
         # end events
 
         # done
@@ -950,7 +1086,6 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
     def _render__analytics__inner(
         self,
         script,
-        nested_script,
         account_id,
         secondary_account=False,
     ):
@@ -1076,51 +1211,85 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
             if self.data_struct['*transaction_items']:
                 log.error('no transaction registered, but transaction_items added')
 
-        # events
-        # ga('send', 'event', 'category', 'action', 'opt_label', opt_value, {'nonInteraction': 1});
+        # EVENTS
+        # example: ga('send', 'event', [eventCategory], [eventAction], [eventLabel], [eventValue], [fieldsObject]);
         _events = []
+        _event_fields_required = ('*category', '*action', )
+        _event_fields_optional = ('*label', '*value', )
+        _event_fields_optional_fieldobject = (('*non_interaction', 'nonInteraction'), )
         for _event_dict in self.data_struct['*tracked_events']:
-            _event_clean = {}
-            # required items
-            try:
-                for _field in ['category', 'action', ]:
-                    _val = _event_dict.get(_field):
-                    if not _val:
-                        _events.append(u"""/* error invalid event ga('%ssend','event' );" */""" % tracker_prefix)
-                        raise ValueError() # break us out of this
-                    _event_clean[_field] = _val
-            except:
-                # break out of the forloop
-                continue
-            # standard options
-            for field in ['opt_label', 'opt_value', ]:
-
-                    
-
             _event_args = []
+            _event_args_optional = []
+            _event_fieldobject = {}
+            # events are expected to be a series of args
+            try:
+                for _field in _event_fields_required:
+                    _value = _event_dict.get(_field)
+                    if not _value:
+                        raise InvalidTag()
+                    _value = "'%s'" % _value  # pop it in a quote
+                    _event_args.append(_value)
+            except:
+                _events.append(INVALID_TAG)
+                continue
+            # figure out the optional args, if any...
+            for _field in _event_fields_optional:
+                # set the value to a default of `None`
+                # don't set it to `undefined` yet.
+                # we need the `None` for tests...
+                _value = _event_dict.get(_field, None)
+                _event_args_optional.append(_value)
+            if _event_args_optional:
+                if not any(_event_args_optional):
+                    # reset this
+                    _event_args_optional = []
+                else:    
+                    # upgrade `None` to `"undefined"`, other items are strings
+                    for _idx, _value in enumerate(_event_args_optional):
+                        if _value is None:
+                            _value = 'undefined' # yo it's undefined
+                        else:
+                            if type(_value) in (int, float):
+                                _value = "%s" % _value  # turn it into a string
+                            elif type(_value) is bool:
+                                _value = ("%s" % _value).lower()  # turn it into a string
+                            else:
+                                _value = "'%s'" % _value  # pop it in a quote
+                        _event_args_optional[_idx] = _value
+                    # remove every 'undefined' from the tail of the list
+                    _max_defined = None
+                    for _idx, value in enumerate(_event_args_optional):
+                        if _value != 'undefined':
+                           _max_defined = _idx
+                    if _max_defined is not None:
+                        _event_args_optional = _event_args_optional[:_max_defined+1]
+                    else:    
+                        _event_args_optional = []
+            # figure out the fieldobject args if any.
+            for (_field_src, _field_dest) in _event_fields_optional_fieldobject:
+                # set the value to a default of `None`
+                # don't set it to `undefined` yet.
+                # we need the `None` for tests...
+                _value = _event_dict.get(_field_src, None)
+                if _value is not None:
+                    _event_fieldobject[_field_dest] = _value
 
-            # the `_trackEvent` api expects the args in this order. render 'undefined'
-            for field in ['category', 'action', 'opt_label', 'opt_value', ]:
-                if field in _event_dict:
-                    _value = _event_dict[field]
-                    if _value is not None:
-                        _value = "'%s'" % _value
-                else:
-                    _value = u"undefined|%s" % field
-                _event_args.append(_value)
-            if 'opt_noninteraction' in _event_dict:
-                _value = int(bool(_event_dict.get('opt_noninteraction')))
-                fieldsObject = u"{'nonInteraction':%s}" % _value
-                _event_args.append(fieldsObject)
-            _events.append(u"""ga('%ssend','event',%s);""" % (tracker_prefix, ','.join(_event_args)))
+            _event_args_all = _event_args + _event_args_optional
+            if _event_fieldobject:
+                _event_args_all.append(custom_dumps(_event_fieldobject))
+            _events.append(u"""ga('%ssend','event',%s);""" % (tracker_prefix, ','.join(_event_args_all)))
+
         if _events:
-            script.extend(_events)
+            for _event in _events:
+                if _event is INVALID_TAG:
+                    script.append("/* ga('%ssend': incompatible event */" % tracker_prefix)
+                else:
+                    script.append(_event)
 
-        return (script, nested_script)
+        return script
 
     def _render__analytics(self, async=None):
         script = []
-        nested_script = []
         if self.use_comments:
             script.append(u"""<!-- Google Analytics -->""")
         script.append(u"""<script type="text/javascript">""")
@@ -1131,22 +1300,16 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');""")
 
         account_id = self.data_struct['*account_id']
-        (script,
-         nested_script
-         ) = self._render__analytics__inner(script,
-                                            nested_script,
-                                            account_id,
-                                            secondary_account=False,
-                                            )
+        script = self._render__analytics__inner(script,
+                                                account_id,
+                                                secondary_account=False,
+                                                )
 
         for (idx, account_id) in enumerate(self.data_struct['*additional_accounts']):
-            (script,
-             nested_script,
-             ) = self._render__analytics__inner(script,
-                                                nested_script,
-                                                account_id,
-                                                secondary_account=idx,
-                                                )
+            script = self._render__analytics__inner(script,
+                                                    account_id,
+                                                    secondary_account=idx,
+                                                    )
 
         script.append(u"""</script>""")
         if self.use_comments:
@@ -1254,53 +1417,47 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         # track_pageview is automatic and part of the config
 
         # events
-        """
-        Conversion:
-            analytics.js field  |   gtag.js parameter
-            --------------------+-----------------------
-            eventAction         |   event_action
-            eventCategory       |   event_category
-            eventLabel          |   event_label
-            eventValue          |   value
-        analytics js
-            ga('send', 'event', {
-              'eventCategory': 'Category',
-              'eventAction': 'Action'
-            });
-
-           gtag('event', <action>, {
-                'event_category': <category>,
-                'event_label': <label>,
-                'value': <value>
-                 });
-            gtag('event', 'video_auto_play_start', {
-              'event_label': 'My promotional video',
-              'event_category': 'video_auto_play',
-              'non_interaction': true
-            });
-        """
-        # events
         # ga('send', 'event', 'category', 'action', 'opt_label', opt_value, {'nonInteraction': 1});
-
         _events = []
-        import pprint
-        pprint.pprint('events', )
-        pprint.pprint(self.data_struct['*tracked_events'])
+        _event_fields_optional_fieldobject = (('*category', 'event_category'),
+                                              ('*label', 'event_label'),
+                                              ('*value', 'value'),
+                                              ('*non_interaction', 'non_interaction'),  # TODO: is this legit?
+                                              )
         for _event_dict in self.data_struct['*tracked_events']:
             # all events require an action
-            _action = _event_dict.get('action')
-            _event_clean = {}
-            fields_remappable = remappable_action_fields('*event', _event_dict, AnalyticsMode.GTAG)
-            for (_dkey, _skey) in fields_remappable:
-                if _skey in _event_dict:
-                    v = _event_dict[_skey]
-                    _event_clean[_dkey] = str(v) if v is not None else None
-            if 'non_interaction' in _event_clean:
-                if type(_event_clean['non_interaction']) is not bool:
-                    _event_clean['non_interaction'] = bool(_event_clean.get('non_interaction'))
+            _event_action = _event_dict.get('*action')
+            try:
+                if not _event_action:
+                    raise InvalidTag()
+            except:
+                _events.append(INVALID_TAG)
+                continue
+                    
+            _event_fieldobject = {}
+            # figure out the fieldobject args if any.
+            for (_field_src, _field_dest) in _event_fields_optional_fieldobject:
+                # set the value to a default of `None`
+                # don't set it to `undefined` yet.
+                # we need the `None` for tests...
+                _value = _event_dict.get(_field_src, None)
+                if _value is not None:
+                    _event_fieldobject[_field_dest] = _value
 
-            _formatted = u"""gtag('event', '%s', %s""" % (_action, custom_dumps(_event_clean))
-            script.append(_formatted)
+            if _event_fieldobject:
+                _formatted = u"""gtag('event','%s',%s""" % (_event_action, custom_dumps(_event_fieldobject))
+                _events.append(_formatted)
+            else:
+                _formatted = u"""gtag('event','%s');""" % _event_action
+                _events.append(_formatted)
+
+        if _events:
+            for _event in _events:
+                if _event is INVALID_TAG:
+                    script.append("/* gtag('event': incompatible event */")
+                else:
+                    script.append(_event)
+            
 
         script.append(u"""</script>""")
         if self.use_comments:

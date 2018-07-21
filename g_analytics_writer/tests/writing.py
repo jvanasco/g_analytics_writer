@@ -121,6 +121,7 @@ class CoreTests(object):
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
         writer.track_event(self.data__event_good_3)
+        writer.track_event(self.data__event_good_4)
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
@@ -176,6 +177,7 @@ class CoreTests(object):
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
         writer.track_event(self.data__event_good_3)
+        writer.track_event(self.data__event_good_4)
         writer.add_transaction(self.data__transaction_dict_good)
         writer.add_transaction_item(self.data__transaction_item_dict)
         as_html = writer.render()
@@ -203,6 +205,7 @@ class CoreTests(object):
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
         writer.track_event(self.data__event_good_3)
+        writer.track_event(self.data__event_good_4)
         writer.add_transaction(self.data__transaction_dict_good)
         writer.add_transaction_item(self.data__transaction_item_dict)
         as_html = writer.render()
@@ -242,49 +245,56 @@ class CoreTests(object):
 
 # global dicts used for tests
 # this lets us compare the different formats
-data__transaction_dict_GA = {
-    'transactionId': 1234,
-    'affiliation': 'ga.js',
-    'total': '100.00',
-    'tax': '10.00',
-    'shipping': '5.00',
-    'city': 'brooklyn',
-    'state': 'new york',
-    'country': 'usa',
+data__transaction_dict_1 = {
+    '*id': 1234,
+    '*affiliation': 'ga.js',
+    '*total': '100.00',
+    '*tax': '10.00',
+    '*shipping': '5.00',
+    '*city': 'brooklyn',
+    '*state': 'new york',
+    '*country': 'usa',
 }
-data__transaction_dict_Analytics = {
-    'id': 1234,
-    'affiliation': 'analytics.js',
-    'revenue': '115.00',
-    'tax': '10.00',
-    'shipping': '5.00',
+data__transaction_dict_2 = {
+    '*id': 1234,
+    '*affiliation': 'analytics.js',
+    '*revenue': '115.00',
+    '*tax': '10.00',
+    '*shipping': '5.00',
 }
 data__transaction_item_dict = {
-    'id': 1234,  # transaction_id
-    'name': 'T-Shirt',                # Product name. Required
-    'sku': 'DD44',                    # SKU/code
-    'category': 'Green Medium',       # Category or variation
-    'price': '100.00',                 # Unit price
-    'quantity': '1'
+    '*transaction_id': 1234,  # transaction_id
+    '*name': 'T-Shirt',                # Product name. Required
+    '*sku': 'DD44',                    # SKU/code
+    '*category': 'Green Medium',       # Category or variation
+    '*price': '100.00',                # Unit price
+    '*quantity': '1'
 }
 
-data__event_1__GA = {
-    'category': 'Videos',
-    'action': 'Play',
-    'opt_label': 'action',
-    'opt_value': 47,
-    'opt_noninteraction': 1,
+data__event_1 = {
+    '*category': 'Videos',
+    '*action': 'Play',
+    '*label': 'action',
+    '*value': 47,
+    '*non_interaction': True,
     }
-data__event_2__GA = {
-    'category': 'Videos',
-    'action': 'Play',
-    'opt_label': 'action',
-    'opt_value': 47,
-    'opt_noninteraction': None
+data__event_2 = {
+    '*category': 'Videos',
+    '*action': 'Play',
+    '*label': 'action',
+    '*value': 47,
+    '*non_interaction': None
     }
-data__event_3__ANALYTICS_hit = {
-    'category': 'category',
-    'action': 'action',
+data__event_3 = {
+    '*category': 'Videos',
+    '*action': 'Play',
+    '*label': 'action',
+    '*value': 47,
+    '*non_interaction': False
+    }
+data__event_4__ANALYTICS_hit = {
+    '*category': 'category',
+    '*action': 'action',
     'metric18': 8000,
 }
 data__custom_variables__GA = (6, 'author', 'jonathan', 1, ) # index, name, value, opt_scope=None)
@@ -294,13 +304,14 @@ data__custom_variables__ANALYTICS = ('dimension9', 'name', 'jonathan', None, ) #
 class TestGA(CoreTests, unittest.TestCase):
     mode = AnalyticsMode.GA_JS
     _test_single_push = True
-    data__transaction_dict_good = data__transaction_dict_GA
-    data__transaction_dict_bad = data__transaction_dict_Analytics
+    data__transaction_dict_good = data__transaction_dict_1
+    data__transaction_dict_bad = data__transaction_dict_2
     data__transaction_item_dict = data__transaction_item_dict
     data__custom_variables = data__custom_variables__GA
-    data__event_good_1 = data__event_1__GA
-    data__event_good_2 = data__event_2__GA
-    data__event_good_3 = data__event_3__ANALYTICS_hit
+    data__event_good_1 = data__event_1
+    data__event_good_2 = data__event_2
+    data__event_good_3 = data__event_3
+    data__event_good_4 = data__event_4__ANALYTICS_hit
     data__test_pageview__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -390,9 +401,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 var _gaq = _gaq || [];
 _gaq.push(['_setAccount','UA-123123-1']);
 _gaq.push(['_trackPageview']);
-_gaq.push(['_addTrans',undefined,'analytics.js',undefined,'10.00','5.00',undefined,undefined,undefined]);
-_gaq.push(['_addItem','1234','DD44','T-Shirt','Green Medium','100.00','1']);
-_gaq.push(['_trackTrans']);
+_gaq.push(/* invalid transaction */);
 (function() {
 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
 ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
@@ -424,8 +433,10 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 var _gaq = _gaq || [];
 _gaq.push(['_setAccount','UA-123123-1']);
 _gaq.push(['_trackPageview']);
-_gaq.push(['_trackEvent','Videos','Play','action','47',true]);
-_gaq.push(['_trackEvent','Videos','Play','action','47',false]);
+_gaq.push(['_trackEvent','Videos','Play','action',47,true]);
+_gaq.push(['_trackEvent','Videos','Play','action',47]);
+_gaq.push(['_trackEvent','Videos','Play','action',47,false]);
+_gaq.push(['_trackEvent','category','action']);
 (function() {
 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
 ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
@@ -477,8 +488,10 @@ _gaq.push(['_trackPageview']);
 _gaq.push(['_addTrans','1234','ga.js','100.00','10.00','5.00','brooklyn','new york','usa']);
 _gaq.push(['_addItem','1234','DD44','T-Shirt','Green Medium','100.00','1']);
 _gaq.push(['_trackTrans']);
-_gaq.push(['_trackEvent','Videos','Play','action','47',true]);
-_gaq.push(['_trackEvent','Videos','Play','action','47',false]);
+_gaq.push(['_trackEvent','Videos','Play','action',47,true]);
+_gaq.push(['_trackEvent','Videos','Play','action',47]);
+_gaq.push(['_trackEvent','Videos','Play','action',47,false]);
+_gaq.push(['_trackEvent','category','action']);
 _gaq.push(['trkr0._setAccount','UA-123123-3']);
 _gaq.push(['trkr0._setDomainName','foo.example.com']);
 _gaq.push(['trkr0._setAllowLinker',true]);
@@ -487,8 +500,10 @@ _gaq.push(['trkr0._trackPageview']);
 _gaq.push(['trkr0._addTrans','1234','ga.js','100.00','10.00','5.00','brooklyn','new york','usa']);
 _gaq.push(['trkr0._addItem','1234','DD44','T-Shirt','Green Medium','100.00','1']);
 _gaq.push(['trkr0._trackTrans']);
-_gaq.push(['trkr0._trackEvent','Videos','Play','action','47',true]);
-_gaq.push(['trkr0._trackEvent','Videos','Play','action','47',false]);
+_gaq.push(['trkr0._trackEvent','Videos','Play','action',47,true]);
+_gaq.push(['trkr0._trackEvent','Videos','Play','action',47]);
+_gaq.push(['trkr0._trackEvent','Videos','Play','action',47,false]);
+_gaq.push(['trkr0._trackEvent','category','action']);
 _gaq.push(['trkr1._setAccount','UA-123123-2']);
 _gaq.push(['trkr1._setDomainName','foo.example.com']);
 _gaq.push(['trkr1._setAllowLinker',true]);
@@ -497,8 +512,10 @@ _gaq.push(['trkr1._trackPageview']);
 _gaq.push(['trkr1._addTrans','1234','ga.js','100.00','10.00','5.00','brooklyn','new york','usa']);
 _gaq.push(['trkr1._addItem','1234','DD44','T-Shirt','Green Medium','100.00','1']);
 _gaq.push(['trkr1._trackTrans']);
-_gaq.push(['trkr1._trackEvent','Videos','Play','action','47',true]);
-_gaq.push(['trkr1._trackEvent','Videos','Play','action','47',false]);
+_gaq.push(['trkr1._trackEvent','Videos','Play','action',47,true]);
+_gaq.push(['trkr1._trackEvent','Videos','Play','action',47]);
+_gaq.push(['trkr1._trackEvent','Videos','Play','action',47,false]);
+_gaq.push(['trkr1._trackEvent','category','action']);
 (function() {
 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
 ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
@@ -520,8 +537,10 @@ _gaq.push(
 ['_addTrans','1234','ga.js','100.00','10.00','5.00','brooklyn','new york','usa'],
 ['_addItem','1234','DD44','T-Shirt','Green Medium','100.00','1'],
 ['_trackTrans'],
-['_trackEvent','Videos','Play','action','47',true],
-['_trackEvent','Videos','Play','action','47',false],
+['_trackEvent','Videos','Play','action',47,true],
+['_trackEvent','Videos','Play','action',47],
+['_trackEvent','Videos','Play','action',47,false],
+['_trackEvent','category','action'],
 ['trkr0._setAccount','UA-123123-3'],
 ['trkr0._setDomainName','foo.example.com'],
 ['trkr0._setAllowLinker',true],
@@ -530,8 +549,10 @@ _gaq.push(
 ['trkr0._addTrans','1234','ga.js','100.00','10.00','5.00','brooklyn','new york','usa'],
 ['trkr0._addItem','1234','DD44','T-Shirt','Green Medium','100.00','1'],
 ['trkr0._trackTrans'],
-['trkr0._trackEvent','Videos','Play','action','47',true],
-['trkr0._trackEvent','Videos','Play','action','47',false],
+['trkr0._trackEvent','Videos','Play','action',47,true],
+['trkr0._trackEvent','Videos','Play','action',47],
+['trkr0._trackEvent','Videos','Play','action',47,false],
+['trkr0._trackEvent','category','action'],
 ['trkr1._setAccount','UA-123123-2'],
 ['trkr1._setDomainName','foo.example.com'],
 ['trkr1._setAllowLinker',true],
@@ -540,8 +561,10 @@ _gaq.push(
 ['trkr1._addTrans','1234','ga.js','100.00','10.00','5.00','brooklyn','new york','usa'],
 ['trkr1._addItem','1234','DD44','T-Shirt','Green Medium','100.00','1'],
 ['trkr1._trackTrans'],
-['trkr1._trackEvent','Videos','Play','action','47',true],
-['trkr1._trackEvent','Videos','Play','action','47',false]
+['trkr1._trackEvent','Videos','Play','action',47,true],
+['trkr1._trackEvent','Videos','Play','action',47],
+['trkr1._trackEvent','Videos','Play','action',47,false],
+['trkr1._trackEvent','category','action']
 );
 (function() {
 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
@@ -557,13 +580,14 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 
 class TestAnalytics(CoreTests, unittest.TestCase):
     mode = AnalyticsMode.ANALYTICS
-    data__transaction_dict_good = data__transaction_dict_Analytics
-    data__transaction_dict_bad = data__transaction_dict_GA
+    data__transaction_dict_good = data__transaction_dict_2
+    data__transaction_dict_bad = data__transaction_dict_1
     data__transaction_item_dict = data__transaction_item_dict
     data__custom_variables = data__custom_variables__ANALYTICS
-    data__event_good_1 = data__event_1__GA
-    data__event_good_2 = data__event_2__GA
-    data__event_good_3 = data__event_3__ANALYTICS_hit
+    data__event_good_1 = data__event_1
+    data__event_good_2 = data__event_2
+    data__event_good_3 = data__event_3
+    data__event_good_4 = data__event_4__ANALYTICS_hit
     data__test_pageview__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -686,8 +710,10 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
 ga('create','UA-123123-1','auto');
 ga('send','pageview');
-ga('send','event','Videos','Play','action','47',{'nonInteraction':1});
-ga('send','event','Videos','Play','action','47',{'nonInteraction':0});
+ga('send','event','Videos','Play','action',47,{"nonInteraction":true});
+ga('send','event','Videos','Play','action',47);
+ga('send','event','Videos','Play','action',47,{"nonInteraction":false});
+ga('send','event','category','action');
 </script>
 <!-- End Google Analytics -->"""
     data__test_crossdomain__html_link_attrs = ''  # empty string
@@ -729,22 +755,28 @@ ga('send','pageview',{"dimension9":"jonathan"});
 ga('ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
 ga('ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
 ga('ecommerce:send');
-ga('send','event','Videos','Play','action','47',{'nonInteraction':1});
-ga('send','event','Videos','Play','action','47',{'nonInteraction':0});
+ga('send','event','Videos','Play','action',47,{"nonInteraction":true});
+ga('send','event','Videos','Play','action',47);
+ga('send','event','Videos','Play','action',47,{"nonInteraction":false});
+ga('send','event','category','action');
 ga('create','UA-123123-3','auto','trkr0',{"allowLinker":true});
 ga('trkr0.send','pageview',{"dimension9":"jonathan"});
 ga('trkr0.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
 ga('trkr0.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
 ga('trkr0.ecommerce:send');
-ga('trkr0.send','event','Videos','Play','action','47',{'nonInteraction':1});
-ga('trkr0.send','event','Videos','Play','action','47',{'nonInteraction':0});
+ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":true});
+ga('trkr0.send','event','Videos','Play','action',47);
+ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":false});
+ga('trkr0.send','event','category','action');
 ga('create','UA-123123-2','auto','trkr1',{"allowLinker":true});
 ga('trkr1.send','pageview',{"dimension9":"jonathan"});
 ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
 ga('trkr1.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
 ga('trkr1.ecommerce:send');
-ga('trkr1.send','event','Videos','Play','action','47',{'nonInteraction':1});
-ga('trkr1.send','event','Videos','Play','action','47',{'nonInteraction':0});
+ga('trkr1.send','event','Videos','Play','action',47,{"nonInteraction":true});
+ga('trkr1.send','event','Videos','Play','action',47);
+ga('trkr1.send','event','Videos','Play','action',47,{"nonInteraction":false});
+ga('trkr1.send','event','category','action');
 </script>
 <!-- End Google Analytics -->"""
     data__test_advanced__global__html = """\
@@ -763,24 +795,30 @@ ga('send','pageview');
 ga('ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
 ga('ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
 ga('ecommerce:send');
-ga('send','event','Videos','Play','action','47',{'nonInteraction':1});
-ga('send','event','Videos','Play','action','47',{'nonInteraction':0});
+ga('send','event','Videos','Play','action',47,{"nonInteraction":true});
+ga('send','event','Videos','Play','action',47);
+ga('send','event','Videos','Play','action',47,{"nonInteraction":false});
+ga('send','event','category','action');
 ga('create','UA-123123-3','auto','trkr0',{"allowLinker":true});
 ga('trkr0.set',{"dimension9":"jonathan"});
 ga('trkr0.send','pageview');
 ga('trkr0.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
 ga('trkr0.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
 ga('trkr0.ecommerce:send');
-ga('trkr0.send','event','Videos','Play','action','47',{'nonInteraction':1});
-ga('trkr0.send','event','Videos','Play','action','47',{'nonInteraction':0});
+ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":true});
+ga('trkr0.send','event','Videos','Play','action',47);
+ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":false});
+ga('trkr0.send','event','category','action');
 ga('create','UA-123123-2','auto','trkr1',{"allowLinker":true});
 ga('trkr1.set',{"dimension9":"jonathan"});
 ga('trkr1.send','pageview');
 ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
 ga('trkr1.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
 ga('trkr1.ecommerce:send');
-ga('trkr1.send','event','Videos','Play','action','47',{'nonInteraction':1});
-ga('trkr1.send','event','Videos','Play','action','47',{'nonInteraction':0});
+ga('trkr1.send','event','Videos','Play','action',47,{"nonInteraction":true});
+ga('trkr1.send','event','Videos','Play','action',47);
+ga('trkr1.send','event','Videos','Play','action',47,{"nonInteraction":false});
+ga('trkr1.send','event','category','action');
 </script>
 <!-- End Google Analytics -->"""
     data__test_userid_prerender__html = """\
@@ -826,13 +864,14 @@ class TestGtag(CoreTests, unittest.TestCase):
     python -munittest g_analytics_writer.tests.writing.TestGtag.test_crossdomain
     """
     mode = AnalyticsMode.GTAG
-    data__transaction_dict_good = data__transaction_dict_Analytics
-    data__transaction_dict_bad = data__transaction_dict_GA
+    data__transaction_dict_good = data__transaction_dict_2
+    data__transaction_dict_bad = data__transaction_dict_1
     data__transaction_item_dict = data__transaction_item_dict
     data__custom_variables = data__custom_variables__ANALYTICS
-    data__event_good_1 = data__event_1__GA
-    data__event_good_2 = data__event_2__GA
-    data__event_good_3 = data__event_3__ANALYTICS_hit
+    data__event_good_1 = data__event_1
+    data__event_good_2 = data__event_2
+    data__event_good_3 = data__event_3
+    data__event_good_4 = data__event_4__ANALYTICS_hit
     data__test_pageview__html = """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
@@ -923,8 +962,10 @@ gtag('event', 'purchase', {"affiliation":"ga.js","tax":"10.00","shipping":"5.00"
   gtag('js', new Date());
 
 gtag('config','UA-123123-1');
-gtag('event', 'Play', {"non_interaction":true,"event_label":"action","event_category":"Videos","value":"47"}
-gtag('event', 'Play', {"non_interaction":false,"event_label":"action","event_category":"Videos","value":"47"}
+gtag('event','Play',{"non_interaction":true,"event_label":"action","event_category":"Videos","value":47}
+gtag('event','Play',{"event_label":"action","event_category":"Videos","value":47}
+gtag('event','Play',{"non_interaction":false,"event_label":"action","event_category":"Videos","value":47}
+gtag('event','action',{"event_category":"category"}
 </script>
 <!-- End Google Analytics -->"""
     data__test_crossdomain__html_link_attrs = ''  # empty string

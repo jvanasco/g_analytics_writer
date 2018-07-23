@@ -13,7 +13,7 @@ re_refresh_15 = re.compile('<meta http-equiv="refresh" content="15"/>')
 re_other_charset = re.compile('<meta charset="utf8"/>')
 
 # used for writing tests
-PRINT_RENDERS = 1
+PRINT_RENDERS = False
 
 # pyramid testing requirements
 # from pyramid import testing
@@ -92,12 +92,15 @@ class CoreTests(object):
         just tests to see the framing comments toggle works
         """
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
-        writer.add_transaction(self.data__transaction_dict_bad)
-        writer.add_transaction_item(self.data__transaction_item_dict)
-        as_html = writer.render()
-        if PRINT_RENDERS:
-            print(as_html)
-        self.assertEqual(as_html, self.data__test_transaction_bad__html)
+        self.assertRaises(ValueError, writer.add_transaction, self.data__transaction_dict_bad)
+
+    def test_transaction_item_bad(self):
+        """
+        just tests to see the framing comments toggle works
+        """
+        writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
+        writer.add_transaction(self.data__transaction_dict_good)
+        self.assertRaises(ValueError, writer.add_transaction_item, self.data__transaction_item_dict_bad)
 
     def test_transaction_good_single_push(self):
         """
@@ -245,6 +248,9 @@ class CoreTests(object):
 
 # global dicts used for tests
 # this lets us compare the different formats
+data__transaction_dict_bad = {
+    # missing data; should raise an error on add
+}
 data__transaction_dict_1 = {
     '*id': 1234,
     '*affiliation': 'ga.js',
@@ -269,6 +275,10 @@ data__transaction_item_dict = {
     '*category': 'Green Medium',       # Category or variation
     '*price': '100.00',                # Unit price
     '*quantity': '1'
+}
+
+data__transaction_item_dict_bad = {
+    '*id': 1234,  # transaction_id presented incorrectly; should raise an error on add
 }
 
 data__event_1 = {
@@ -305,8 +315,9 @@ class TestGA(CoreTests, unittest.TestCase):
     mode = AnalyticsMode.GA_JS
     _test_single_push = True
     data__transaction_dict_good = data__transaction_dict_1
-    data__transaction_dict_bad = data__transaction_dict_2
+    data__transaction_dict_bad = data__transaction_dict_bad
     data__transaction_item_dict = data__transaction_item_dict
+    data__transaction_item_dict_bad = data__transaction_item_dict_bad
     data__custom_variables = data__custom_variables__GA
     data__event_good_1 = data__event_1
     data__event_good_2 = data__event_2
@@ -395,20 +406,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 })();
 </script>
 <!-- End Google Analytics -->"""
-    data__test_transaction_bad__html = """\
-<!-- Google Analytics -->
-<script type="text/javascript">
-var _gaq = _gaq || [];
-_gaq.push(['_setAccount','UA-123123-1']);
-_gaq.push(['_trackPageview']);
-_gaq.push(/* invalid transaction */);
-(function() {
-var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
-var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-})();
-</script>
-<!-- End Google Analytics -->"""
+
     data__test_transaction_good_single_push__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -581,8 +579,9 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 class TestAnalytics(CoreTests, unittest.TestCase):
     mode = AnalyticsMode.ANALYTICS
     data__transaction_dict_good = data__transaction_dict_2
-    data__transaction_dict_bad = data__transaction_dict_1
+    data__transaction_dict_bad = data__transaction_dict_bad
     data__transaction_item_dict = data__transaction_item_dict
+    data__transaction_item_dict_bad = data__transaction_item_dict_bad
     data__custom_variables = data__custom_variables__ANALYTICS
     data__event_good_1 = data__event_1
     data__event_good_2 = data__event_2
@@ -660,21 +659,7 @@ ga('ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt",
 ga('ecommerce:send');
 </script>
 <!-- End Google Analytics -->"""
-    data__test_transaction_bad__html = """\
-<!-- Google Analytics -->
-<script type="text/javascript">
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-ga('create','UA-123123-1','auto');
-ga('require','ecommerce');
-ga('send','pageview');
-ga('ecommerce:addTransaction',{"affiliation":"ga.js","tax":"10.00","id":"1234","shipping":"5.00"})
-ga('ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
-ga('ecommerce:send');
-</script>
-<!-- End Google Analytics -->"""
+
     data__test_crossdomain__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -865,8 +850,9 @@ class TestGtag(CoreTests, unittest.TestCase):
     """
     mode = AnalyticsMode.GTAG
     data__transaction_dict_good = data__transaction_dict_2
-    data__transaction_dict_bad = data__transaction_dict_1
+    data__transaction_dict_bad = data__transaction_dict_bad
     data__transaction_item_dict = data__transaction_item_dict
+    data__transaction_item_dict_bad = data__transaction_item_dict_bad
     data__custom_variables = data__custom_variables__ANALYTICS
     data__event_good_1 = data__event_1
     data__event_good_2 = data__event_2
@@ -936,10 +922,11 @@ gtag('config','UA-123123-1');
   gtag('js', new Date());
 
 gtag('config','UA-123123-1');
-gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00","id":"1234","quantity":"1"}],"tax":"10.00","value":"115.00","affiliation":"analytics.js","shipping":"5.00","transaction_id":"1234"}
+gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00","id":"DD44","name":"T-Shirt","quantity":"1"}],"tax":"10.00","shipping":"5.00","affiliation":"analytics.js","value":"115.00","transaction_id":"1234"}
 </script>
 <!-- End Google Analytics -->"""
-    data__test_transaction_bad__html ="""\
+
+    data__test_crossdomain__html ="""\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -947,12 +934,20 @@ gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00",
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
-gtag('config','UA-123123-1');
-gtag('event', 'purchase', {"affiliation":"ga.js","tax":"10.00","shipping":"5.00","transaction_id":"1234","items":[{"category":"Green Medium","price":"100.00","id":"1234","quantity":"1"}]}
+gtag('config','UA-123123-1',{"linker":{"domains":["foo.example.com"]}});
 </script>
 <!-- End Google Analytics -->"""
-    data__test_crossdomain__html =""""""
-    data__test_crossdomain__html_multi =""""""
+    data__test_crossdomain__html_multi ="""\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1',{"linker":{"domains":["bar.example.com"]}});
+</script>
+<!-- End Google Analytics -->"""
     data__test_track_event__html = """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
@@ -982,7 +977,25 @@ gtag('event','pageview',{"name":"jonathan"});
 </script>
 <!-- End Google Analytics -->"""
     data__test_custom_variables__global__html = data__test_custom_variables__html
-    data__test_advanced__html = """"""
+    data__test_advanced__html = """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
+gtag('config','UA-123123-3',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
+gtag('config','UA-123123-2',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
+gtag('event','pageview',{"name":"jonathan"});
+gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00","id":"DD44","name":"T-Shirt","quantity":"1"}],"tax":"10.00","shipping":"5.00","affiliation":"analytics.js","value":"115.00","transaction_id":"1234"}
+gtag('event','Play',{"non_interaction":true,"event_label":"action","event_category":"Videos","value":47}
+gtag('event','Play',{"event_label":"action","event_category":"Videos","value":47}
+gtag('event','Play',{"non_interaction":false,"event_label":"action","event_category":"Videos","value":47}
+gtag('event','action',{"event_category":"category"}
+</script>
+<!-- End Google Analytics -->"""
     data__test_advanced__global__html = data__test_advanced__html
     data__test_userid_prerender__html ="""\
 <!-- Global site tag (gtag.js) - Google Analytics -->

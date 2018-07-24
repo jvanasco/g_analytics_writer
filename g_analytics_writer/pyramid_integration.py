@@ -5,7 +5,6 @@ from . import AnalyticsMode
 # ==============================================================================
 
 
-
 def includeme(config):
     """the pyramid includeme command
     including this will automatically setup the AnalyticsWriter object for every request

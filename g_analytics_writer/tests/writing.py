@@ -13,7 +13,7 @@ re_refresh_15 = re.compile('<meta http-equiv="refresh" content="15"/>')
 re_other_charset = re.compile('<meta charset="utf8"/>')
 
 # used for writing tests
-PRINT_RENDERS = False
+PRINT_RENDERS = 1
 
 # pyramid testing requirements
 # from pyramid import testing
@@ -25,11 +25,12 @@ class AnalyticsMode(object):
     GTAG = 4
 """
 
+
 class CoreTests(object):
 
     mode = None
     _test_single_push = None
-    
+
     def test_pageview(self):
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
         as_html = writer.render()
@@ -68,7 +69,7 @@ class CoreTests(object):
         if PRINT_RENDERS:
             print(html_comments)
         self.assertEqual(html_comments, self.data__test_comments__html_comments)
-        
+
         nocomments = AnalyticsWriter('UA-123123-1', mode=self.mode, use_comments=False)
         html_nocomments = nocomments.render()
         if PRINT_RENDERS:
@@ -147,7 +148,7 @@ class CoreTests(object):
         self.assertEqual(link_attrs, self.data__test_crossdomain__html_link_attrs)
 
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
-        writer.set_crossdomain_tracking('foo.example.com', all_domains='bar.example.com')
+        writer.set_crossdomain_tracking(domains=['foo.example.com', 'bar.example.com'])
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
@@ -193,7 +194,7 @@ class CoreTests(object):
         if PRINT_RENDERS:
             print(as_html_global)
         self.assertEqual(as_html_global, self.data__test_advanced__global__html)
-    
+
     def test_advanced_single_push(self):
         if not self._test_single_push:
             raise unittest.SkipTest("single_push not tested on %s" % self.__class__.__name__)
@@ -287,30 +288,30 @@ data__event_1 = {
     '*label': 'action',
     '*value': 47,
     '*non_interaction': True,
-    }
+}
 data__event_2 = {
     '*category': 'Videos',
     '*action': 'Play',
     '*label': 'action',
     '*value': 47,
     '*non_interaction': None
-    }
+}
 data__event_3 = {
     '*category': 'Videos',
     '*action': 'Play',
     '*label': 'action',
     '*value': 47,
     '*non_interaction': False
-    }
+}
 data__event_4__ANALYTICS_hit = {
     '*category': 'category',
     '*action': 'action',
     'metric18': 8000,
 }
-data__custom_variables__GA = (6, 'author', 'jonathan', 1, ) # index, name, value, opt_scope=None)
-data__custom_variables__ANALYTICS = ('dimension9', 'name', 'jonathan', None, ) # index, name, value, opt_scope=None)
+data__custom_variables__GA = (6, 'author', 'jonathan', 1, )  # index, name, value, opt_scope=None)
+data__custom_variables__ANALYTICS = ('dimension9', 'name', 'jonathan', None, )  # index, name, value, opt_scope=None)
 
-               
+
 class TestGA(CoreTests, unittest.TestCase):
     mode = AnalyticsMode.GA_JS
     _test_single_push = True
@@ -365,7 +366,7 @@ ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') 
 var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
 })();
 </script>
-<!-- End Google Analytics -->"""    
+<!-- End Google Analytics -->"""
     data__test_comments__html_comments = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -576,6 +577,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
     data__test_userid_postrender__html = ''
     data__test_userid_postrender_multi__html = ''
 
+
 class TestAnalytics(CoreTests, unittest.TestCase):
     mode = AnalyticsMode.ANALYTICS
     data__transaction_dict_good = data__transaction_dict_2
@@ -610,7 +612,7 @@ ga('send','pageview');
 ga('create','UA-123123-3','auto','trkr0');
 ga('trkr0.send','pageview');
 </script>
-<!-- End Google Analytics -->"""    
+<!-- End Google Analytics -->"""
     data__test_multiple_accounts__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -682,7 +684,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
 ga('create','UA-123123-1','auto',{"allowLinker":true});
 ga('require','linker');
-ga('linker:autoLink',['bar.example.com','foo.example.com']);
+ga('linker:autoLink',['foo.example.com','bar.example.com']);
 ga('send','pageview');
 </script>
 <!-- End Google Analytics -->"""
@@ -893,7 +895,7 @@ gtag('config','UA-123123-2');
 gtag('config','UA-123123-3');
 </script>
 <!-- End Google Analytics -->"""
-    data__test_comments__html_comments ="""\
+    data__test_comments__html_comments = """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -904,7 +906,7 @@ gtag('config','UA-123123-3');
 gtag('config','UA-123123-1');
 </script>
 <!-- End Google Analytics -->"""
-    data__test_comments__html_nocomments ="""\
+    data__test_comments__html_nocomments = """\
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -913,7 +915,7 @@ gtag('config','UA-123123-1');
 
 gtag('config','UA-123123-1');
 </script>"""
-    data__test_transaction_good__html ="""\
+    data__test_transaction_good__html = """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -926,7 +928,7 @@ gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00",
 </script>
 <!-- End Google Analytics -->"""
 
-    data__test_crossdomain__html ="""\
+    data__test_crossdomain__html = """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -937,7 +939,7 @@ gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00",
 gtag('config','UA-123123-1',{"linker":{"domains":["foo.example.com"]}});
 </script>
 <!-- End Google Analytics -->"""
-    data__test_crossdomain__html_multi ="""\
+    data__test_crossdomain__html_multi = """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -945,7 +947,7 @@ gtag('config','UA-123123-1',{"linker":{"domains":["foo.example.com"]}});
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
-gtag('config','UA-123123-1',{"linker":{"domains":["bar.example.com"]}});
+gtag('config','UA-123123-1',{"linker":{"domains":["foo.example.com","bar.example.com"]}});
 </script>
 <!-- End Google Analytics -->"""
     data__test_track_event__html = """\
@@ -997,7 +999,7 @@ gtag('event','action',{"event_category":"category"}
 </script>
 <!-- End Google Analytics -->"""
     data__test_advanced__global__html = data__test_advanced__html
-    data__test_userid_prerender__html ="""\
+    data__test_userid_prerender__html = """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>

@@ -20,7 +20,7 @@ class _TestHarness(object):
     _gwriter_use_comments = None
     _gwriter_modes_support_alternate = None
     _gwriter_single_push = None
-    
+
     def setUp(self):
         self.config = testing.setUp()
 
@@ -53,30 +53,31 @@ class _TestHarness(object):
 class _TestSetup(_TestHarness):
 
     def test_pyramid_setup(self):
-        """test the request property worked
-        
+        """
+        test the request property worked
+
         This has many variations, all designed to ensure the request vars are parsed as intended
         """
         self.assertTrue('g_analytics_writer' in self.request.__dict__)
-        
+
         # we might supply a string, which is turned to an int
-        self.assertEqual(self.request.g_analytics_writer._mode, int(self._gwriter_mode))
+        self.assertEqual(self.request.g_analytics_writer.mode, int(self._gwriter_mode))
 
         # possible overrides
         if self._gwriter_use_comments is None:
-            self.assertEqual(self.request.g_analytics_writer._use_comments, False)
+            self.assertEqual(self.request.g_analytics_writer.use_comments, False)
         else:
-            self.assertEqual(self.request.g_analytics_writer._use_comments, self._gwriter_use_comments)
+            self.assertEqual(self.request.g_analytics_writer.use_comments, self._gwriter_use_comments)
 
         # possible overrides
         if self._gwriter_single_push is None:
-            self.assertEqual(self.request.g_analytics_writer._single_push, False)
+            self.assertEqual(self.request.g_analytics_writer.single_push, False)
         else:
-            self.assertEqual(self.request.g_analytics_writer._single_push, self._gwriter_single_push)
+            self.assertEqual(self.request.g_analytics_writer.single_push, self._gwriter_single_push)
 
         # possible overrides
         if not self._gwriter_modes_support_alternate:
-            self.assertEqual(self.request.g_analytics_writer._modes_support_alternate, None)
+            self.assertEqual(self.request.g_analytics_writer.modes_support_alternate, None)
         else:
             _expected = []
             _input = self._gwriter_modes_support_alternate
@@ -86,42 +87,51 @@ class _TestSetup(_TestHarness):
                 _expected = (_input, )
             else:
                 _expected = tuple([int(i.strip()) for i in _input.split(',') if i.strip()])
-            self.assertEqual(self.request.g_analytics_writer._modes_support_alternate, _expected)
+            self.assertEqual(self.request.g_analytics_writer.modes_support_alternate, _expected)
 
 
 class TestSetupSimple(_TestSetup, unittest.TestCase):
     pass
 
+
 class TestSetupModeString(_TestSetup, unittest.TestCase):
     _gwriter_mode = str(g_analytics_writer.AnalyticsMode.GA_JS)
+
 
 class TestSetupCommentsTrue(_TestSetup, unittest.TestCase):
     _gwriter_use_comments = True
 
+
 class TestSetupCommentsFalse(_TestSetup, unittest.TestCase):
     _gwriter_use_comments = False
+
 
 class TestSetupAlternateModesNullA(_TestSetup, unittest.TestCase):
     _gwriter_modes_support_alternate = []
 
+
 class TestSetupAlternateModesNullB(_TestSetup, unittest.TestCase):
     _gwriter_modes_support_alternate = ''
+
 
 class TestSetupAlternateModesSingleString(_TestSetup, unittest.TestCase):
     _gwriter_modes_support_alternate = str(g_analytics_writer.AnalyticsMode.ANALYTICS)
 
+
 class TestSetupAlternateModesSingleInt(_TestSetup, unittest.TestCase):
     _gwriter_modes_support_alternate = g_analytics_writer.AnalyticsMode.ANALYTICS
+
 
 class TestSetupAlternateModesMultipleString(_TestSetup, unittest.TestCase):
     _gwriter_modes_support_alternate = str(','.join([str(i) for i in [g_analytics_writer.AnalyticsMode.ANALYTICS, g_analytics_writer.AnalyticsMode.GTAG]]))
 
+
 class TestSetupAlternateModesMultipleTupleInt(_TestSetup, unittest.TestCase):
     _gwriter_modes_support_alternate = (g_analytics_writer.AnalyticsMode.ANALYTICS, g_analytics_writer.AnalyticsMode.GTAG)
 
+
 class TestSetupAlternateModesMultipleListInt(_TestSetup, unittest.TestCase):
     _gwriter_modes_support_alternate = [g_analytics_writer.AnalyticsMode.ANALYTICS, g_analytics_writer.AnalyticsMode.GTAG]
-
 
 
 class _TestPageviews(_TestHarness):

@@ -7,27 +7,37 @@ import logging
 log = logging.getLogger(__name__)
 
 
-__VERSION__ = '0.2.0a2'
+__VERSION__ = '0.2.0a3'
 
 
 # ==============================================================================
 
 
-'''
-def escape_text(text=''):
-    """helper function"""
-    return str(text).replace("\'", "\\'")
-'''
+"""
+!! IMPORTANT !!
+
+Content marked "Google Documentation" is copyright by Google and appears under
+their Creative Commons Attribution 3.0 License
+"""
 
 
-def custom_dumps(data):
-    return json_dumps(data, separators=(',', ':'))
+# ==============================================================================
 
 
+# make these into package vars
 PREFIXLEN_dimension = len('dimension')
 PREFIXLEN_metric = len('metric')
 
+
+def custom_dumps(data):
+    # simply the dumping
+    return json_dumps(data, separators=(',', ':'))
+
+
 def generate_tracker_name(secondary_account):
+    """
+    this is used by `ga.js` and `analytics.js` to generate unique tracker names
+    """
     secondary_account_name = None
     tracker_prefix = ''
     if secondary_account is not False:
@@ -52,6 +62,22 @@ class AnalyticsMode(object):
 
 
 translation_matrix = {
+    '*event': {
+        '*action': {AnalyticsMode.ANALYTICS: 'eventAction',
+                    },
+        '*category': {AnalyticsMode.ANALYTICS: 'eventCategory',
+                      AnalyticsMode.GTAG: 'event_category',
+                      },
+        '*label': {AnalyticsMode.ANALYTICS: 'eventLabel',
+                   AnalyticsMode.GTAG: 'event_label',
+                   },
+        '*value': {AnalyticsMode.ANALYTICS: 'eventValue',
+                   AnalyticsMode.GTAG: 'value',
+                   },
+        '*non_interaction': {AnalyticsMode.ANALYTICS: 'nonInteraction',
+                             AnalyticsMode.GTAG: 'non_interaction',
+                             },
+    },
     '*transaction': {
         '*id': {AnalyticsMode.GA_JS: 'transactionId',
                 AnalyticsMode.ANALYTICS: 'id',
@@ -85,14 +111,14 @@ translation_matrix = {
                     },
         '*list_name': {AnalyticsMode.ANALYTICS: 'list',
                        AnalyticsMode.GTAG: 'list_name',
-                      },
+                       },
         '*checkout_step': {AnalyticsMode.ANALYTICS: 'step',
                            AnalyticsMode.GTAG: 'checkout_step',
                            },
         '*checkout_option': {AnalyticsMode.ANALYTICS: 'option',
                              AnalyticsMode.GTAG: 'checkout_option',
                              },
-        },
+    },
     '*transaction_item': {
         '*transaction_id': {AnalyticsMode.GA_JS: 'transactionId',
                             AnalyticsMode.ANALYTICS: 'id',
@@ -119,7 +145,7 @@ translation_matrix = {
                       AnalyticsMode.GTAG: 'quantity',
                       },
         '*brand': {AnalyticsMode.GTAG: 'brand',
-                     },
+                   },
         '*variant': {AnalyticsMode.GTAG: 'variant',
                      },
         '*coupon': {AnalyticsMode.GTAG: 'coupon',
@@ -181,7 +207,7 @@ def source_dict_to_ordered_args(source_dict, args_order, remove_undefined=None):
     for _field in args_order:
         _value = source_dict.get(_field, None)
         if _value is None:
-            _value = 'undefined' # yo it's undefined
+            _value = 'undefined'  # it's undefined(js) keyword
         elif type(_value) in (int, float):
             _value = "%s" % _value  # turn it into a string
         elif type(_value) is bool:
@@ -193,9 +219,9 @@ def source_dict_to_ordered_args(source_dict, args_order, remove_undefined=None):
         _max_defined = None
         for _idx, _value in enumerate(item_args):
             if _value != 'undefined':
-               _max_defined = _idx
+                _max_defined = _idx
         if _max_defined is not None:
-            item_args = item_args[:_max_defined+1]
+            item_args = item_args[:(_max_defined + 1)]
         else:
             # TODO: log/error
             item_args = []
@@ -210,6 +236,7 @@ class InvalidTag(Exception):
     pass
 
 
+# global instance used for comparison
 INVALID_TAG = InvalidTag()
 
 
@@ -218,8 +245,8 @@ INVALID_TAG = InvalidTag()
 
 class AnalyticsWriter(object):
     data_struct = None
-    _mode = None
-    _modes_support_alternate = None
+    mode = None
+    modes_support_alternate = None
     single_push = None
     global_custom_data = None
     use_comments = True
@@ -239,22 +266,21 @@ class AnalyticsWriter(object):
         Sets up self.data_struct dict which we use for storage.
 
         You'd probably have something like this in your pyramid app:
-        
+
             config.include('g_analytics_writer.pyramid_integration')
-        
+
         That will mount a custom configured ``AnalyticsWriter`` object on the
         Pyramid ``request`` as `request.g_analytics_writer`
-        
 
-        Args-
+        args-
             :account_id
                 STRING
                 The Google Analytics account id.
                 example: UA-123123123-1
-        KwArgs-
+        kwargs-
             :mode
                 INT
-                default: `AnalyticsMode._default` == analytics.js
+                default: `AnalyticsMode._default` == `analytics.js`
                 The INT from the ``AnalyticsMode`` class specifiying the
                 output type.
                 This can not be changed after instantiation, because it is used
@@ -264,7 +290,7 @@ class AnalyticsWriter(object):
                 default: None
                 if alternate modes are supported, the package will try to upgrade
                 incompatible data to the newer formats. Disabling this can
-                optimize Python operations per request.                
+                optimize Python operations per request.
             :use_comments
                 BOOLEAN
                 default: True
@@ -290,17 +316,17 @@ class AnalyticsWriter(object):
         """
         if mode not in AnalyticsMode._valid_modes:
             raise ValueError("invalid mode")
-        self._mode = mode
+        self.mode = mode
         if modes_support_alternate:
             # convert string/int to iterables
             if type(modes_support_alternate) not in (list, tuple):
                 modes_support_alternate = (modes_support_alternate, )
-            self._modes_support_alternate = modes_support_alternate
+            self.modes_support_alternate = modes_support_alternate
         self.use_comments = use_comments
         self.single_push = single_push
         self.global_custom_data = global_custom_data  # this is public!
 
-        # ga.js allows a force of ssl
+        # `ga.js` allows a force of ssl
         # https://developers.google.com/analytics/devguides/collection/gajs/#ssl
         self.force_ssl = force_ssl
 
@@ -349,61 +375,75 @@ class AnalyticsWriter(object):
         *** note: items in this chart with a leading `{` are fieldObject keys ***
         *** note: other items are args ***
         =========================================================================
-        native           | ga.js              | analytics.js    | gtag.js
+        native           | `ga.js`            | `analytics.js`  | `gtag.js`
         -----------------+--------------------+-----------------+-----------------
         *action          | action             | {eventAction    | action/"event name"
         *category        | category           | {eventCategory  | {event_category
         *label           | opt_label          | {eventLabel     | {event_label
         *value           | opt_value          | {eventValue     | {value
-        *non_interaction | opt_noninteraction | {nonInteraction | non_interaction
+        *non_interaction | opt_noninteraction | {nonInteraction | {non_interaction
         -----------------+--------------------+-----------------+-----------------
         `non_interaction` must be a boolean.
         other values will be rendered as-is.
         - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         Platform Version Notes:
-        
+
         gtag.js:
+        --------
             * `category` is OPTIONAL
             * each default `action` has a default `category`
             * each default `action` *might* have a default `label`
-            * custom events (`action`) have a default `category` of 'engagement' and a default `label` of 'not set'.
+            * custom events (`action`) have a default `category` of 'engagement'
+              and a default `label` of 'not set'.
 
         ========================================================================
 
-        Upstream Documentation
+        Google Documentation
+        --------------------
 
         gtag.js
-            https://developers.google.com/analytics/devguides/collection/gtagjs/events#send_events
-            
-            # example
+        -------
+        Docs:   https://developers.google.com/analytics/devguides/collection/gtagjs/events#send_events
+
+        Example:
             gtag('event', <action>, {
               'event_category': <category>,
               'event_label': <label>,
               'value': <value>
             });
+            gtag('event', 'video_auto_play_start', {
+              'event_label': 'My promotional video',
+              'event_category': 'video_auto_play',
+              'non_interaction': true
+            });
 
-            # fields reference
+        Fields Reference:
             `<action>` is the string that will appear as the event action in Google Analytics Event reports.
             `<category>` is the string that will appear as the event category.
             `<label>` is the string that will appear as the event label.
-            `<value>` is a non-negative integer that will appear as the event value.            
-        
-            only `action` is required
+            `<value>` is a non-negative integer that will appear as the event value.
 
-            * user timings have shifted:
+        g_analytics_writer notes:
+            * only `action` is required
+            * user timings have also shifted:
                 https://developers.google.com/analytics/devguides/collection/gtagjs/migration
-                analytics.js    | gtag.js
+                `analytics.js`  | `gtag.js`
                 ----------------+--------
                 timingValue     | value
                 timingVar       | name
 
         analytics.js
-            https://developers.google.com/analytics/devguides/collection/analyticsjs/events#implementation
+        ------------
+        Docs:   https://developers.google.com/analytics/devguides/collection/analyticsjs/events#implementation
 
-            # example
+        Example:
             ga('send', 'event', [eventCategory], [eventAction], [eventLabel], [eventValue], [fieldsObject]);
+            ga('send', 'event', {
+              'eventCategory': 'Category',
+              'eventAction': 'Action'
+            });
 
-            # fields reference
+        Fields Reference:
             https://developers.google.com/analytics/devguides/collection/analyticsjs/field-reference
 
             `eventCategory`  - required
@@ -411,52 +451,27 @@ class AnalyticsWriter(object):
             `eventLabel`     - optional
             `eventValue`     - optional
             `nonInteraction` - optional
-            
-        ga.js
-            https://developers.google.com/analytics/devguides/collection/gajs/eventTrackerGuide#setting-up-event-tracking
 
-            # example
+        ga.js
+        -----
+        Docs:   https://developers.google.com/analytics/devguides/collection/gajs/eventTrackerGuide#setting-up-event-tracking
+
+        Example:
             _trackEvent(category, action, opt_label, opt_value, opt_noninteraction)
-            
-            # fields reference
+
+        Fields Reference:
             `category`            String  The general event category (e.g. "Videos").
             `action`              String  The action for the event (e.g. "Play").
             `opt_label`           String  An optional descriptor for the event.
             `opt_value`           Int     An optional value associated with the event. You can see your event values in the Overview, Categories, and Actions reports, where they are listed by event or aggregated across events, depending upon your report view.
             `opt_noninteraction`  Boolean Default value is false. By default, the event hit sent by _trackEvent() will impact a visitor's bounce rate. By setting this parameter to true, this event hit will not be used in bounce rate calculations.
-
-        =====
-        Conversion:
-            analytics.js field  |   gtag.js parameter
-            --------------------+-----------------------
-            eventAction         |   event_action
-            eventCategory       |   event_category
-            eventLabel          |   event_label
-            eventValue          |   value
-        analytics js
-            ga('send', 'event', {
-              'eventCategory': 'Category',
-              'eventAction': 'Action'
-            });
-
-           gtag('event', <action>, {
-                'event_category': <category>,
-                'event_label': <label>,
-                'value': <value>
-                 });
-            gtag('event', 'video_auto_play_start', {
-              'event_label': 'My promotional video',
-              'event_category': 'video_auto_play',
-              'non_interaction': true
-            });
-
         """
         self.data_struct['*tracked_events'].append(track_dict)
 
     def set_custom_variable(self, index, name, value, opt_scope=None):
         """
-        ga.js called it "custom variable"
-        analytics/gtag call it "custom dimension"
+        `ga.js` called it "custom variable"
+        `analytics.js`/`gtag.js` call it "custom dimension"
         """
         self.set_custom_dimension(index, name, value, opt_scope=opt_scope)
 
@@ -468,23 +483,47 @@ class AnalyticsWriter(object):
         * VALUE is required, NAME is not
         * Name can be passed in as "None" on `analytics.js` installs
         HOWEVER it is recommended that you pass in the Name
-        
+
         INDEX/SLOT
-            ga.js index is an int
-            analytics & gtag, index is usually a "prefix" of "dimension" with 'int' appended
+            `ga.js` index is an int
+            `analytics.js` & `gtag.js``, index is usually a "prefix" of "dimension" with 'int' appended
             if you pass in `dimension9`, it will be stripped to `9` then rendered as needed
 
         There are slight differences in how this is handled:
 
+        analytics.js
+        ------------
+
+        Docs:   https://developers.google.com/analytics/devguides/collection/analyticsjs/custom-dims-mets
+
+        Overview:
+
+            There are up to 20 allowed dimensions on the basic plan.
+
+            `name` + `scope` combinations are configured in the (online) admin dashboard as "dimensions"
+
+            The dimension is then set into the tracker instance:
+
+                ga('set','dimension1','Paid');
+
+            or they are sent in as pagedata:
+
+                ga('send','pageview',{"dimension1":"Paid"});
+
+            Note that `dimension` is a prefix.
+
         ga.js
+        -----
 
-            this is configured ad-hoc
+        Overview:
 
-            there are up to 6 slots
+            This is configured ad-hoc.
 
-            _gaq.push(['_setCustomVar', slot, name, value, scope)
+            There are up to 6 slots per page
 
-            explained:
+                _gaq.push(['_setCustomVar', slot, name, value, scope)
+
+            Explained:
 
                 _gaq.push(['_setCustomVar',
                   1,                           // Slot
@@ -493,25 +532,11 @@ class AnalyticsWriter(object):
                   1                            // Scope (1 = User scope)
                 ]);
 
-        analytics.js
-
-            https://developers.google.com/analytics/devguides/collection/analyticsjs/custom-dims-mets
-
-            there are up to 20 dimeneions
-
-            name+scope combos are configured on the admin as "dimensions"
-
-            they are then set into the tracker instance as the dimention
-
-                ga('set','dimension1','Paid');
-
-            or they are sent in as pagedata
-                ga('send','pageview',{"dimension1":"Paid"});
         """
         if type(index) is not int:
             if index.startswith('dimension'):
                 index = index[PREFIXLEN_dimension:]
-            
+
         self.data_struct['*custom_dimensions'][index] = (name,
                                                          value,
                                                          opt_scope,
@@ -519,8 +544,13 @@ class AnalyticsWriter(object):
 
     def set_custom_metric(self, index, name, value):
         """
-        this is not tracked in ga.js
-        this is supported in analytics and gtag
+        ga.js
+        -----
+        not supported
+
+        `analytics.js` and `gtag.js`
+        ----------------------------
+        supported
         """
         if type(index) is not int:
             if index.startswith('metric'):
@@ -528,81 +558,120 @@ class AnalyticsWriter(object):
         self.data_struct['*custom_metrics'][index] = (name,
                                                       value,
                                                       )
-    def set_crossdomain_tracking(self, domain_name, all_domains=None, accept_incoming=None):
+
+    def set_crossdomain_tracking(self, domains, decorate_forms=None, accept_incoming=None):
         """
-        ga.js
-            just set in the domain name to link to
-            
-    
+        enable crossdomain tracking
+
+        :args[0] `domains`
+         a single domain or list/tuple of domains. this will be converted internally into a list.
+
+        :kwargs `decorate_forms`
+         default `None`
+         if True, will enable the `decorate_forms` option on the linker. (`analytics.js`, `gtag.js`)
+
+        :kwargs `accept_incoming`
+         default `None`
+         if True, will enable the `accept_incoming` option on the linker. (`gtag.js`)
+
+        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        Platform Differences
+        ====================
+
         gtag.js
+        -------
+        Docs:   https://developers.google.com/analytics/devguides/collection/gtagjs/cross-domain
 
-            https://developers.google.com/analytics/devguides/collection/gtagjs/cross-domain
+        Info:   auto links autodecorated with `_ga=1.199239214.1624002396.1440697407`
 
-            auto links autodecorated with `_ga=1.199239214.1624002396.1440697407`
-                        
+        Example:
+
                 gtag('config', 'GA_TRACKING_ID', {
                   'linker': {
                     'domains': ['example.com']
                   }
                 });
-            
+
+        Google Documentation:
+
             If you have forms on your site pointing to the destination domain, set the optional decorate_forms property of the linker parameter to true.
 
             If the destination domain is not configured to automatically link domains, you can instruct the destination page to look for linker parameters by setting the accept_incoming property of the linker parameter to true on the destination property's config:
 
+
         analytics.js
+        ------------
+        Docs:   https://developers.google.com/analytics/devguides/collection/gajs/gaTrackingSite
+
+        ga.js
+        -----
+        Docs:   https://developers.google.com/analytics/devguides/collection/analyticsjs/linker
+
+        Info:   the first domain will be used to set the cookie, others will be ignored.
         """
-        if self.data_struct['*crossdomain_tracking'] is None:
-            self.data_struct['*crossdomain_tracking'] = {}
-        self.data_struct['*crossdomain_tracking'] = {'domain': domain_name,
+        if type(domains) not in (list, tuple):
+            domains = [domains, ]
+        self.data_struct['*crossdomain_tracking'] = {'domains': domains,
+                                                     'decorate_forms': decorate_forms,
                                                      'accept_incoming': accept_incoming,
-                                                     'all_domains': None,
                                                      }
-        if all_domains:
-            if type(all_domains) not in (list, tuple):
-                all_domains = [all_domains, ]
-            self.data_struct['*crossdomain_tracking']['all_domains'] = all_domains
 
     def render_crossdomain_link_attrs(self, link):
         """
+        analytics.js and gtag.js
+        ------------------------
+        google's javascript library loads a plugin which automates setting up the onclick events via javascript
+
         ga.js
-            renders onclick
-        analytics.js
-            ANALYTICS loads a plugin which automates setting up the onclick events via javascript
+        -----
+        renders onclick
         """
-        if self._mode == AnalyticsMode.GA_JS:
+        if self.mode == AnalyticsMode.GA_JS:
             # should this compare to the domain?
             return '''onclick="_gaq.push(['_link','%s']); return false;"''' % link
         return ''
 
     def set_user_id(self, user_id):
         """
-        ga.js - may not be supported
+        gtag.js
+        --------
+        supported
+        Note:   YOU MUST ENABLE THIS ON THE ADMIN DASHBOARD
 
-        analytics.js - supported
-            YOU MUST ENABLED THIS ON THE ADMIN DASHBOARD
-        gtag.js - supported
-            YOU MUST ENABLED THIS ON THE ADMIN DASHBOARD
+        analytics.js
+        ------------
+        supported
+        Note:   YOU MUST ENABLE THIS ON THE ADMIN DASHBOARD
+
+        ga.js
+        -----
+        may not be supported
         """
         self.data_struct['*user_id'] = user_id
 
     def setrender_user_id(self, user_id):
         """
-        used if the user_id wasn't set during setup
+        used if the `user_id` was not configured during setup
 
-        analytics.js - supported
-            YOU MUST ENABLED THIS ON THE ADMIN DASHBOARD
-        gtag.js - supported
-            YOU MUST ENABLED THIS ON THE ADMIN DASHBOARD
+        gtag.js
+        -------
+        supported
+        Note:   YOU MUST ENABLE THIS ON THE ADMIN DASHBOARD
 
-        google analytics
+        analytics.js
+        ------------
+        supported
+        Note:   YOU MUST ENABLE THIS ON THE ADMIN DASHBOARD
+
+        Google Documentation:
             // At a later time, once the `userId` value is known,
             // sets the value on the tracker.
             // Setting the userId doesn't send data to Google Analytics.
             // You must also use a pageview or event to send the data.
         """
         self.data_struct['*user_id'] = user_id
-        if self._mode == AnalyticsMode.ANALYTICS:
+        if self.mode == AnalyticsMode.ANALYTICS:
             payload = []
             payload.append("""ga('set','userId','%s');""" % user_id)
             payload.append("""ga('send','event','authentication','user-id available');""")
@@ -613,7 +682,7 @@ class AnalyticsWriter(object):
                 payload.append("""ga('%sset','userId','%s');""" % (tracker_prefix, user_id))
                 payload.append("""ga('%ssend','event','authentication','user-id available');""" % tracker_prefix)
             return '\n'.join(payload)
-        elif self._mode == AnalyticsMode.GTAG:
+        elif self.mode == AnalyticsMode.GTAG:
             # https://developers.google.com/analytics/devguides/collection/gtagjs/cookies-user-id
             payload = []
             account_id = self.data_struct['*account_id']
@@ -625,8 +694,13 @@ class AnalyticsWriter(object):
 
     def add_transaction(self, track_dict):
         """
-        IMPORTANT:
-            gtag.js requires ecommerce to be configured in the dashboard's view settings
+        gtag.js
+        -------
+        requires ecommerce to be configured in the dashboard's view settings
+
+        analytics.js
+        -------
+        requires ecommerce to be configured in the dashboard's view settings
 
 
         CORE DIFFERENCES
@@ -634,23 +708,23 @@ class AnalyticsWriter(object):
         =========================================================================
         Chart of translated terms
         =========================================================================
-        native           | ga.js              | analytics.js    | gtag.js
+        native           | `ga.js`            | `analytics.js`  | `gtag.js`
         -----------------+--------------------+-----------------+-----------------
         *id              | transactionId      | id              | transaction_id
         *affiliation     | . affiliation      | . affiliation   | . affiliation
-        *total           | total              |                 | 
-        *revenue         |                    | . revenue       | . value           
+        *total           | total              |                 |
+        *revenue         |                    | . revenue       | . value
         *tax             | . tax              | . tax           | . tax
         *shipping        | . shipping         | . shipping      | . shipping
-        *city            | . city             |                 | 
-        *state           | . state            |                 | 
-        *country         | . country          |                 | 
+        *city            | . city             |                 |
+        *state           | . state            |                 |
+        *country         | . country          |                 |
         *coupon          |                    | .! coupon       | . coupon
         *list_name       |                    | .! list         | . list_name
         *checkout_step   |                    | .! step         | . checkout_step
         *checkout_option |                    | .! option       | . checkout_option
         -----------------+--------------------+-----------------+-----------------
-        items with a prefix `.` are optional 
+        items with a prefix `.` are optional
         items with a prefix `*` are optional in Google Analytics, but required by this package
         items with a prefix `!` require the enhanced ecommerce plugin
         # important info
@@ -658,68 +732,16 @@ class AnalyticsWriter(object):
             *revenue = includes tax/shipping
         - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-        ga.js   | https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce?csw=1#_gat.GA_Tracker_._addTrans
-            _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
-                String   transactionId Required. Internal unique transaction ID number for this transaction.
-                String   affiliation Optional. Partner or store affiliation (undefined if absent).
-                String   total Required. Total dollar amount of the transaction. Does not include tax and shipping and should only be considered the "grand total" if you explicity include shipping and tax.
-                String   tax Optional. Tax amount of the transaction.
-                String   shipping Optional. Shipping charge for the transaction.
-                String   city Optional. City to associate with transaction.
-                String   state Optional. State to associate with transaction.
-                String   country Optional. Country to associate with transaction.
+        Google Documentation
+        --------------------
 
-        analytics.js | https://developers.google.com/analytics/devguides/collection/upgrade/reference/gajs-analyticsjs
-                     | https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
-                     | https://developers.google.com/analytics/devguides/collection/analyticsjs/field-reference
 
-                id  text    Yes The transaction ID. (e.g. 1234)
-                affiliation text    No  The store or affiliation from which this transaction occurred (e.g. Acme Clothing).
-                revenue currency    No  Specifies the total revenue or grand total associated with the transaction (e.g. 11.99). This value may include shipping, tax costs, or other adjustments to total revenue that you want to include as part of your revenue calculations.
-                shipping    currency    No  Specifies the total shipping cost of the transaction. (e.g. 5)
-                tax currency    No  Specifies the total tax of the transaction. (e.g. 1.29)
-
-                ga('ecommerce:addTransaction', {
-                  'id': '1234',                     // Transaction ID. Required.
-                  'affiliation': 'Acme Clothing',   // Affiliation or store name.
-                  'revenue': '11.99',               // Grand Total.
-                  'shipping': '5',                  // Shipping.
-                  'tax': '1.29'                     // Tax.
-                });
-
-        gtag.js | https://developers.google.com/gtagjs/reference/event
-                | https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
-
-            Conversion
-
-                Enhanced ecommerce action data
-                analytics.js field  |   gtag.js parameter
-                --------------------+-----------------------
-                id                  |   transaction_id
-                affiliation         |   affiliation
-                revenue             |   value
-                tax                 |   tax
-                shipping            |   shipping
-                coupon              |   coupon
-                list                |   list_name
-                step                |   checkout_step
-                option              |   checkout_option
-                --------------------+-----------------------
-
-                Product and promotion actions
-                --------------------------------+---------------------------------------
-                analytics.js field	            |   gtag.js event
-                add	                            |   add_to_cart
-                checkout (first step)	        |   begin_checkout
-                checkout (any subsequent step)	|   checkout_progress
-                checkout_option	                |   set_checkout_option
-                click		                    |   select_content (without promotions)
-                detail	                	    |   view_item
-                promo_click	                	|   select_content (with promotions)
-                purchase		                |   purchase
-                refund		                    |   refund
-                remove		                    |   remove_from_cart
-                --------------------------------+---------------------------------------
+        gtag.js
+        ------------
+        Docs:
+            https://developers.google.com/gtagjs/reference/event
+            https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
+        Field Reference:
 
             event: purchase
             https://developers.google.com/gtagjs/reference/event
@@ -752,6 +774,77 @@ class AnalyticsWriter(object):
             kwargs: coupon
                 https://developers.google.com/gtagjs/reference/parameter#event_parameters
                 coupon  string  'spring_fun'    Coupon code for a purchasable item
+
+        analytics.js
+        ------------
+        Docs:
+            https://developers.google.com/analytics/devguides/collection/upgrade/reference/gajs-analyticsjs
+            https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
+            https://developers.google.com/analytics/devguides/collection/analyticsjs/field-reference
+        Example:
+            ga('ecommerce:addTransaction', {
+              'id': '1234',                     // Transaction ID. Required.
+              'affiliation': 'Acme Clothing',   // Affiliation or store name.
+              'revenue': '11.99',               // Grand Total.
+              'shipping': '5',                  // Shipping.
+              'tax': '1.29'                     // Tax.
+            });
+        Field Reference:
+            id  text    Yes The transaction ID. (e.g. 1234)
+            affiliation text    No  The store or affiliation from which this transaction occurred (e.g. Acme Clothing).
+            revenue currency    No  Specifies the total revenue or grand total associated with the transaction (e.g. 11.99). This value may include shipping, tax costs, or other adjustments to total revenue that you want to include as part of your revenue calculations.
+            shipping    currency    No  Specifies the total shipping cost of the transaction. (e.g. 5)
+            tax currency    No  Specifies the total tax of the transaction. (e.g. 1.29)
+
+        ga.js
+        -----
+        Docs:
+            https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce?csw=1#_gat.GA_Tracker_._addTrans
+        Example:
+            _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
+        Field Reference:
+            String   transactionId Required. Internal unique transaction ID number for this transaction.
+            String   affiliation Optional. Partner or store affiliation (undefined if absent).
+            String   total Required. Total dollar amount of the transaction. Does not include tax and shipping and should only be considered the "grand total" if you explicity include shipping and tax.
+            String   tax Optional. Tax amount of the transaction.
+            String   shipping Optional. Shipping charge for the transaction.
+            String   city Optional. City to associate with transaction.
+            String   state Optional. State to associate with transaction.
+            String   country Optional. Country to associate with transaction.
+
+
+        Conversion Notes
+        ================
+
+        Enhanced ecommerce action data
+        analytics.js field  |   gtag.js parameter
+        --------------------+-----------------------
+        id                  |   transaction_id
+        affiliation         |   affiliation
+        revenue             |   value
+        tax                 |   tax
+        shipping            |   shipping
+        coupon              |   coupon
+        list                |   list_name
+        step                |   checkout_step
+        option              |   checkout_option
+        --------------------+-----------------------
+
+        Product and promotion actions
+        --------------------------------+---------------------------------------
+        analytics.js field	            |   gtag.js event
+        --------------------------------+---------------------------------------
+        add	                            |   add_to_cart
+        checkout (first step)	        |   begin_checkout
+        checkout (any subsequent step)	|   checkout_progress
+        checkout_option	                |   set_checkout_option
+        click		                    |   select_content (without promotions)
+        detail	                	    |   view_item
+        promo_click	                	|   select_content (with promotions)
+        purchase		                |   purchase
+        refund		                    |   refund
+        remove		                    |   remove_from_cart
+        --------------------------------+---------------------------------------
         """
         # stash this into a dict
         _transaction_id = track_dict.get('*id', '')
@@ -765,13 +858,13 @@ class AnalyticsWriter(object):
     def add_transaction_item(self, item_dict):
         """
         IMPORTANT:
-            gtag.js requires ecommerce to be configured in the dashboard's view settings
+            `gtag.js` requires ecommerce to be configured in the dashboard's view settings
 
 
         =========================================================================
         Chart of translated terms
         =========================================================================
-        native           | ga.js              | analytics.js    | gtag.js
+        native           | `ga.js`            | `analytics.js`  | `gtag.js`
         -----------------+--------------------+-----------------+-----------------
         *id              | * transactionId    | id              | *
         *sku             | sku                | sku             | id
@@ -791,40 +884,38 @@ class AnalyticsWriter(object):
         items with a prefix `.` are optional;
         items with a prefix `*` are optional in Google Analytics, but required by this package
         items with a prefix `!` require the enhanced ecommerce plugin
-        # important info
+        # platform notes
             ga.js
                 doesn't require transactionId, but this package does
-            gtag
+            gtag.js
                 doesn't require the transactionId, but drops the item within a json payload of the transaction
                 id OR name is required; we require both
         - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-                    items[].id  string  'P12345'    Unique ID/SKU for the item
-                    items[].category    string  'Apparel/T-Shirts'  Item category
-                    items[].name    string  'Android Warhol T-Shirt'    Item name
-                    items[].price   currency    '29.2'  Purchase price of the item
-                    items[].quantity    integer 2   Item quantity
-                    items[].brand   string  'Google'    Brand of the item
+        Google Documentation
+        ====================
 
-                    items[].creative_name   string  'spring_banner_2'   Name of a creative used
-                    items[].creative_slot   string  'banner_slot_1' Name of the creative slot
-                    items[].location_id string  'Mountain View' Location of the item
+        gtag.js
+        -------
+        Fields Reference:
+            items[].id  string  'P12345'    Unique ID/SKU for the item
+            items[].category    string  'Apparel/T-Shirts'  Item category
+            items[].name    string  'Android Warhol T-Shirt'    Item name
+            items[].price   currency    '29.2'  Purchase price of the item
+            items[].quantity    integer 2   Item quantity
+            items[].brand   string  'Google'    Brand of the item
 
+            items[].creative_name   string  'spring_banner_2'   Name of a creative used
+            items[].creative_slot   string  'banner_slot_1' Name of the creative slot
+            items[].location_id string  'Mountain View' Location of the item
 
+        analytics.js
+        -------
+        Docs:
+            https://developers.google.com/analytics/devguides/collection/upgrade/reference/gajs-analyticsjs
+            https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
 
-
-        ga.js   | https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce#_gat.GA_Tracker_._addItem
-            _addItem(transactionId, sku, name, category, price, quantity)
-                String   transactionId Optional Order ID of the transaction to associate with item.
-                String   sku Required. Item's SKU code.
-                String   name Required. Product name. Required to see data in the product detail report.
-                String   category Optional. Product category.
-                String   price Required. Product price.
-                String   quantity Required. Purchase quantity.
-
-        analytics.js | https://developers.google.com/analytics/devguides/collection/upgrade/reference/gajs-analyticsjs
-                     | https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
-
+        Example:
             ga('ecommerce:addItem', {
               'id': '1234',                     // Transaction ID. Required.
               'name': 'Fluffy Pink Bunnies',    // Product name. Required.
@@ -833,6 +924,22 @@ class AnalyticsWriter(object):
               'price': '11.99',                 // Unit price.
               'quantity': '1'                   // Quantity.
             });
+
+        ga.js
+        -------
+        Docs:
+            https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce#_gat.GA_Tracker_._addItem
+
+        Example:
+            _addItem(transactionId, sku, name, category, price, quantity)
+
+        Fields Reference:
+                String   transactionId Optional Order ID of the transaction to associate with item.
+                String   sku Required. Item's SKU code.
+                String   name Required. Product name. Required to see data in the product detail report.
+                String   category Optional. Product category.
+                String   price Required. Product price.
+                String   quantity Required. Purchase quantity.
         """
         _transaction_id = item_dict.get('*transaction_id', '')
         if not _transaction_id:
@@ -844,6 +951,9 @@ class AnalyticsWriter(object):
             self.data_struct['*transaction_items'][_transaction_id] = []
         self.data_struct['*transaction_items'][_transaction_id].append(item_dict)
 
+    # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+    # Internal API render tools below
+
     def _render__ga_js__inner(
         self,
         script,
@@ -852,7 +962,7 @@ class AnalyticsWriter(object):
         secondary_account=False,
     ):
         """
-        this handles the inner render for ga.js
+        this handles the inner render for `ga.js`
 
         args/kwargs:
             script = array of script lines
@@ -935,7 +1045,7 @@ class AnalyticsWriter(object):
         _single_push = self.single_push
         if secondary_account is False:
             if self.force_ssl is True:
-                # ga.js allows a force of ssl
+                # `ga.js` allows a force of ssl
                 # https://developers.google.com/analytics/devguides/collection/gajs/#ssl
                 if _single_push:
                     nested_script.append(u"""['_gat._forceSSL']""")
@@ -1018,16 +1128,17 @@ class AnalyticsWriter(object):
                        onclick="_gaq.push(['_link', 'http://dogs.example-petstore.com/intro.html']); return false;">
         """
         if self.data_struct['*crossdomain_tracking']:
+            # this operates on the FIRST domain
             if _single_push:
-                nested_script.append(u"""['%s_setDomainName','%s']""" % (tracker_prefix, self.data_struct['*crossdomain_tracking']['domain']))
+                nested_script.append(u"""['%s_setDomainName','%s']""" % (tracker_prefix, self.data_struct['*crossdomain_tracking']['domains'][0]))
                 nested_script.append(u"""['%s_setAllowLinker',true]""" % (tracker_prefix))
             else:
-                script.append(u"""_gaq.push(['%s_setDomainName','%s']);""" % (tracker_prefix, self.data_struct['*crossdomain_tracking']['domain']))
+                script.append(u"""_gaq.push(['%s_setDomainName','%s']);""" % (tracker_prefix, self.data_struct['*crossdomain_tracking']['domains'][0]))
                 script.append(u"""_gaq.push(['%s_setAllowLinker',true]);""" % tracker_prefix)
 
         # _setCustomVar is next
         for index in sorted(self.data_struct['*custom_dimensions'].keys()):
-            # for ga.js:
+            # for `ga.js`:
             # index == str(integer)
             # _payload == (name, value, opt_scope)
             _payload = self.data_struct['*custom_dimensions'][index]
@@ -1053,13 +1164,15 @@ class AnalyticsWriter(object):
         # # _addTrans
         # # _addItem
         # # _trackTrans
+
+        # ecommerce
         if self.data_struct['*transaction']:
             # _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
             # _addItem(transactionId, sku, name, category, price, quantity)
             _txn_fields_required = field_requirements['*transaction'][AnalyticsMode.GA_JS]['required']
-            _txn_fields_optional = field_requirements['*transaction'][AnalyticsMode.GA_JS]['optional']
+            # _txn_fields_optional = field_requirements['*transaction'][AnalyticsMode.GA_JS]['optional']
             _item_fields_required = field_requirements['*transaction_item'][AnalyticsMode.GA_JS]['required']
-            _item_fields_optional = field_requirements['*transaction_item'][AnalyticsMode.GA_JS]['optional']
+            # _item_fields_optional = field_requirements['*transaction_item'][AnalyticsMode.GA_JS]['optional']
 
             _txn_fields_order = field_requirements['*transaction'][AnalyticsMode.GA_JS]['order']
             _item_fields_order = field_requirements['*transaction_item'][AnalyticsMode.GA_JS]['order']
@@ -1082,8 +1195,8 @@ class AnalyticsWriter(object):
                     continue
                 _transaction_args = source_dict_to_ordered_args(_transaction_dict, _txn_fields_order, remove_undefined=True)
                 _formatted = """['%(tracker_prefix)s_addTrans',%(joined_args)s]""" % {'tracker_prefix': tracker_prefix,
-                                                                                     'joined_args': ','.join(_transaction_args)
-                                                                                     }
+                                                                                      'joined_args': ','.join(_transaction_args)
+                                                                                      }
                 if _single_push:
                     nested_script.append(_formatted)
                 else:
@@ -1147,6 +1260,7 @@ class AnalyticsWriter(object):
                     _value = "'%s'" % _value  # pop it in a quote
                     _event_args.append(_value)
             except:
+                # catch all Exceptions
                 _events.append(INVALID_TAG)
                 continue
             # figure out the optional args, if any...
@@ -1160,11 +1274,11 @@ class AnalyticsWriter(object):
                 if all(e is None for e in _event_args_optional):
                     # reset this
                     _event_args_optional = []
-                else:    
+                else:
                     # upgrade `None` to `"undefined"`, other items are strings
                     for _idx, _value in enumerate(_event_args_optional):
                         if _value is None:
-                            _value = 'undefined' # yo it's undefined
+                            _value = 'undefined'  # it's undefined(js keyword)
                         elif type(_value) in (int, float):
                             _value = "%s" % _value  # turn it into a string
                         elif type(_value) is bool:
@@ -1176,10 +1290,10 @@ class AnalyticsWriter(object):
                     _max_defined = None
                     for _idx, _value in enumerate(_event_args_optional):
                         if _value != 'undefined':
-                           _max_defined = _idx
+                            _max_defined = _idx
                     if _max_defined is not None:
-                        _event_args_optional = _event_args_optional[:_max_defined+1]
-                    else:    
+                        _event_args_optional = _event_args_optional[:(_max_defined + 1)]
+                    else:
                         _event_args_optional = []
             _event_args_all = _event_args + _event_args_optional
             _events.append("""['%s_trackEvent',%s]""" % (tracker_prefix, ','.join(_event_args_all)))
@@ -1207,7 +1321,7 @@ class AnalyticsWriter(object):
             script.append(u"""<!-- Google Analytics -->""")
         script.append(u"""<script type="text/javascript">""")
         script.append(u"""var _gaq = _gaq || [];""")
-        
+
         _single_push = self.single_push
 
         # start the single push if we elected
@@ -1281,16 +1395,9 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
             # crossdomain
             if self.data_struct['*crossdomain_tracking']:
                 script.append(u"""ga('require','linker');""")
-                destination_domain = self.data_struct['*crossdomain_tracking']['domain']
-                _all_domains = self.data_struct['*crossdomain_tracking'].get('all_domains')
-                if _all_domains:
-                    destination_domain = set([destination_domain, ])
-                    destination_domain.update(_all_domains)
-                    destination_domain = sorted(destination_domain)
-                    destination_domain = ','.join(["'%s'" % domain for domain in destination_domain])
-                else:
-                    destination_domain = "'%s'" % destination_domain
-                script.append(u"""ga('linker:autoLink',[%s]);""" % destination_domain)
+                destination_domains = self.data_struct['*crossdomain_tracking']['domains']
+                destination_domains = ','.join(["'%s'" % d for d in destination_domains])
+                script.append(u"""ga('linker:autoLink',[%s]);""" % destination_domains)
             # ecommerce
             if self.data_struct['*transaction']:
                 script.append(u"""ga('require','ecommerce');""")
@@ -1300,7 +1407,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 
         # custom variables?
         for index in sorted(self.data_struct['*custom_dimensions'].keys()):
-            # for ga.js:
+            # for `ga.js`:
             # index == str(integer)
             # payload == (name, value, opt_scope)
             # however... we only need send the VALUE, because name+opt_scope are handled on the admin dashboard
@@ -1310,7 +1417,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
             # remember, we stripped `dimension` out
             custom_data["dimension%s" % index] = _payload[1]  # value
         for index in sorted(self.data_struct['*custom_metrics'].keys()):
-            # for ga.js:
+            # for `ga.js`:
             # index == str(integer)
             # payload == (name, value, opt_scope)
             # however... we only need send the VALUE, because name+opt_scope are handled on the admin dashboard
@@ -1319,7 +1426,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
                 continue
             # remember, we stripped `metric` out
             custom_data["metric%s" % index] = _payload[1]  # value
-        
+
         if self.global_custom_data:
             # update the entire tracker
             script.append(u"""ga('%sset',%s);""" % (tracker_prefix, custom_dumps(custom_data)))
@@ -1342,12 +1449,13 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         # # ecommerce:addTransaction
         # # ecommerce:addItem
         # # ga('ecommerce:send');
-        if self.data_struct['*transaction']:
 
+        # ecommerce
+        if self.data_struct['*transaction']:
             _txn_fields_required = field_requirements['*transaction'][AnalyticsMode.ANALYTICS]['required']
-            _txn_fields_optional = field_requirements['*transaction'][AnalyticsMode.ANALYTICS]['optional']
+            # _txn_fields_optional = field_requirements['*transaction'][AnalyticsMode.ANALYTICS]['optional']
             _item_fields_required = field_requirements['*transaction_item'][AnalyticsMode.ANALYTICS]['required']
-            _item_fields_optional = field_requirements['*transaction_item'][AnalyticsMode.ANALYTICS]['optional']
+            # _item_fields_optional = field_requirements['*transaction_item'][AnalyticsMode.ANALYTICS]['optional']
 
             # used to decide if we `send`
             _valid_transactions = False
@@ -1411,6 +1519,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
                     _value = "'%s'" % _value  # pop it in a quote
                     _event_args.append(_value)
             except:
+                # catch all Exceptions
                 _events.append(INVALID_TAG)
                 continue
             # figure out the optional args, if any...
@@ -1424,11 +1533,11 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
                 if not any(_event_args_optional):
                     # reset this
                     _event_args_optional = []
-                else:    
+                else:
                     # upgrade `None` to `"undefined"`, other items are strings
                     for _idx, _value in enumerate(_event_args_optional):
                         if _value is None:
-                            _value = 'undefined' # yo it's undefined
+                            _value = 'undefined'  # it's undefined(js keyword)
                         else:
                             if type(_value) in (int, float):
                                 _value = "%s" % _value  # turn it into a string
@@ -1441,10 +1550,10 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
                     _max_defined = None
                     for _idx, value in enumerate(_event_args_optional):
                         if _value != 'undefined':
-                           _max_defined = _idx
+                            _max_defined = _idx
                     if _max_defined is not None:
-                        _event_args_optional = _event_args_optional[:_max_defined+1]
-                    else:    
+                        _event_args_optional = _event_args_optional[:(_max_defined + 1)]
+                    else:
                         _event_args_optional = []
             # figure out the fieldobject args if any.
             for (_field_src, _field_dest) in _event_fields_optional_fieldobject:
@@ -1499,7 +1608,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 
     def _render__gtag(self):
         """
-        migration guide: https://developers.google.com/analytics/devguides/collection/gtagjs/migration
+        migration guide: https://developers.google.com/analytics/devguides/collection/djs/migration
         """
         script = []
         account_id = self.data_struct['*account_id']
@@ -1520,12 +1629,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             create_args['linker'] = {}
             if self.data_struct['*crossdomain_tracking']['accept_incoming']:
                 create_args['linker']['accept_incoming'] = True
-            _domains_all = self.data_struct['*crossdomain_tracking']['all_domains']
-            if not _domains_all:
-                _domain = self.data_struct['*crossdomain_tracking']['domain']
-                create_args['linker']['domains'] = [_domain, ]
-            else:
-                create_args['linker']['domains'] = _domains_all
+            create_args['linker']['domains'] = self.data_struct['*crossdomain_tracking']['domains']
 
         if self.data_struct['*user_id']:
             create_args['user_id'] = self.data_struct['*user_id']
@@ -1541,7 +1645,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
                 custom_values[_payload[0]] = _payload[1]
             create_args['custom_map'] = custom_map
             jsons_custom_values = custom_dumps(custom_values)
-        
+
         # set the main account_id config
         if not create_args:
             script.append("""gtag('config','%s');""" % account_id)
@@ -1561,9 +1665,9 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         # ecommerce
         if self.data_struct['*transaction']:
             _txn_fields_required = field_requirements['*transaction'][AnalyticsMode.GTAG]['required']
-            _txn_fields_optional = field_requirements['*transaction'][AnalyticsMode.GTAG]['optional']
+            # _txn_fields_optional = field_requirements['*transaction'][AnalyticsMode.GTAG]['optional']
             _item_fields_required = field_requirements['*transaction_item'][AnalyticsMode.GTAG]['required']
-            _item_fields_optional = field_requirements['*transaction_item'][AnalyticsMode.GTAG]['optional']
+            # _item_fields_optional = field_requirements['*transaction_item'][AnalyticsMode.GTAG]['optional']
 
             # used to decide if we `send`
             _valid_transactions = False
@@ -1633,9 +1737,10 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
                 if not _event_action:
                     raise InvalidTag()
             except:
+                # catch all Exceptions
                 _events.append(INVALID_TAG)
                 continue
-                    
+
             _event_fieldobject = {}
             # figure out the fieldobject args if any.
             for (_field_src, _field_dest) in _event_fields_optional_fieldobject:
@@ -1659,7 +1764,6 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
                     script.append("/* gtag('event': incompatible event */")
                 else:
                     script.append(_event)
-            
 
         script.append(u"""</script>""")
         if self.use_comments:
@@ -1680,7 +1784,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         """
         if (mode is not None) and (mode not in AnalyticsMode._valid_modes):
             raise ValueError("invalid mode")
-        mode = mode if mode is not None else self._mode
+        mode = mode if mode is not None else self.mode
         if mode == AnalyticsMode.GA_JS:
             return self._render__ga_js()
         elif mode == AnalyticsMode.ANALYTICS:

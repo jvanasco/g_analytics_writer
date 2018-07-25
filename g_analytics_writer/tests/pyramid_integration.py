@@ -2,6 +2,7 @@ import g_analytics_writer
 import g_analytics_writer.pyramid_integration
 
 from g_analytics_writer import AnalyticsWriter
+from g_analytics_writer import GtagDimensionsStrategy
 
 # core testing facility
 import unittest
@@ -23,6 +24,7 @@ class _TestHarness(object):
     _gwriter_single_push = None
     _gwriter_gtag_dimensions_strategy = None
     _gwriter_global_custom_data = None
+    _expected_setup_fail = None
 
     def setUp(self):
         self.config = testing.setUp()
@@ -40,6 +42,9 @@ class _TestHarness(object):
         if self._gwriter_gtag_dimensions_strategy is not None:
             settings['g_analytics_writer.gtag_dimensions_strategy'] = self._gwriter_gtag_dimensions_strategy
 
+        if self._expected_setup_fail:
+            self.assertRaises(ValueError, self.config.include, 'g_analytics_writer.pyramid_integration')
+            return
 
         self.config.include('g_analytics_writer.pyramid_integration')
         self.context = testing.DummyResource()
@@ -64,6 +69,9 @@ class _TestSetup(_TestHarness):
 
         This has many variations, all designed to ensure the request vars are parsed as intended
         """
+        if self._expected_setup_fail:
+            raise unittest.SkipTest("This test should have successfully failed during setUp; no further testing needed")
+
         self.assertTrue('g_analytics_writer' in self.request.__dict__)
 
         # we might supply a string, which is turned to an int
@@ -118,12 +126,17 @@ class TestSetupGlobalCustomDataFalse(_TestSetup, unittest.TestCase):
     _gwriter_global_custom_data = False
 
 
-class TestSetupGtagDimensionsStrategyTrue(_TestSetup, unittest.TestCase):
-    _gwriter_gtag_dimensions_strategy = True
+class TestSetupGtagDimensionsStrategySetConfig(_TestSetup, unittest.TestCase):
+    _gwriter_gtag_dimensions_strategy = GtagDimensionsStrategy.SET_CONFIG
 
 
-class TestSetupGtagDimensionsStrategyFalse(_TestSetup, unittest.TestCase):
-    _gwriter_gtag_dimensions_strategy = False
+class TestSetupGtagDimensionsStrategyConfignopageviewSetEvent(_TestSetup, unittest.TestCase):
+    _gwriter_gtag_dimensions_strategy = GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT
+
+
+class TestSetupGtagDimensionsStrategyBad(_TestSetup, unittest.TestCase):
+    _gwriter_gtag_dimensions_strategy = 100
+    _expected_setup_fail = True
 
 
 class _TestPageviews(_TestHarness):

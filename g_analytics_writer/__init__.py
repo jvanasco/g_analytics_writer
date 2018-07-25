@@ -321,7 +321,7 @@ class AnalyticsWriter(object):
         self.mode = mode
         self.use_comments = use_comments
         self.single_push = single_push
-            
+
         # `ga.js` allows a force of ssl
         # https://developers.google.com/analytics/devguides/collection/gajs/#ssl
         self.force_ssl = force_ssl
@@ -331,7 +331,7 @@ class AnalyticsWriter(object):
 
         self.data_struct = {
             '*account_id': account_id,
-            '*additional_accounts': set({}),
+            '*additional_accounts': [],
             '*tracked_events': [],
             '*custom_dimensions': {},
             '*custom_metrics': {},
@@ -348,13 +348,11 @@ class AnalyticsWriter(object):
     def set_account_additional__add(self, account_id):
         """add an additional account id to send the data to.  please note - this is only tested to work with the async method.
         """
-        self.data_struct['*additional_accounts'].add(account_id)
+        if account_id not in self.data_struct['*additional_accounts']:
+            self.data_struct['*additional_accounts'].append(account_id)
 
     def set_account_additional__del(self, account_id):
-        try:
-            self.data_struct['*additional_accounts'].remove(account_id)
-        except KeyError:
-            pass
+        self.data_struct['*additional_accounts'] = [i for i in self.data_struct['*additional_accounts'] if i != account_id]
 
     def track_event(self, track_dict):
         """

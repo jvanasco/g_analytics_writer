@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import g_analytics_writer
 from g_analytics_writer import AnalyticsWriter
 from g_analytics_writer import AnalyticsMode
 from g_analytics_writer import GtagDimensionsStrategy
@@ -9,6 +10,7 @@ from g_analytics_writer import GtagDimensionsStrategy
 import unittest
 import re
 import os
+from json import dumps as json_dumps
 
 # regexes to test against
 re_refresh_15 = re.compile('<meta http-equiv="refresh" content="15"/>')
@@ -23,7 +25,20 @@ PRINT_RENDERS = bool(int(os.environ.get('g_analytics_writer_debug', 0)))
 # from pyramid import testing
 
 
+# we need to monkeypatch this in...
+# production doesn't care about sorted keys
+# py2 and p3 generate different sorts though
+def custom_dumps_sorted(data):
+    # simply the dumping
+    return json_dumps(data, separators=(',', ':'), sort_keys=True)
+
+
+# monkeypatch it
+g_analytics_writer.custom_dumps = custom_dumps_sorted
+
+
 class CoreTests(object):
+    maxDiff = None  # test authoring
 
     mode = None
     _test_single_push = None
@@ -198,10 +213,10 @@ class CoreTests(object):
 
     def test_advanced(self):
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
-        
+
         # make sure this is True by default
         self.assertTrue(writer.global_custom_data)
-        
+
         (index, name, value, opt_scope) = self.data__custom_variables
         # crossdomain
         writer.set_crossdomain_tracking('foo.example.com')
@@ -218,7 +233,7 @@ class CoreTests(object):
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
-            
+
         # by default, these use global data
         self.assertEqual(as_html, self.data__test_advanced__html)
 
@@ -536,7 +551,7 @@ _gaq.push(['_trackEvent','Videos','Play','action',47,true]);
 _gaq.push(['_trackEvent','Videos','Play','action',47]);
 _gaq.push(['_trackEvent','Videos','Play','action',47,false]);
 _gaq.push(['_trackEvent','category','action']);
-_gaq.push(['trkr0._setAccount','UA-123123-3']);
+_gaq.push(['trkr0._setAccount','UA-123123-2']);
 _gaq.push(['trkr0._setDomainName','foo.example.com']);
 _gaq.push(['trkr0._setAllowLinker',true]);
 _gaq.push(['trkr0._setCustomVar',6,'author','jonathan',1]);
@@ -548,7 +563,7 @@ _gaq.push(['trkr0._trackEvent','Videos','Play','action',47,true]);
 _gaq.push(['trkr0._trackEvent','Videos','Play','action',47]);
 _gaq.push(['trkr0._trackEvent','Videos','Play','action',47,false]);
 _gaq.push(['trkr0._trackEvent','category','action']);
-_gaq.push(['trkr1._setAccount','UA-123123-2']);
+_gaq.push(['trkr1._setAccount','UA-123123-3']);
 _gaq.push(['trkr1._setDomainName','foo.example.com']);
 _gaq.push(['trkr1._setAllowLinker',true]);
 _gaq.push(['trkr1._setCustomVar',6,'author','jonathan',1]);
@@ -585,7 +600,7 @@ _gaq.push(
 ['_trackEvent','Videos','Play','action',47],
 ['_trackEvent','Videos','Play','action',47,false],
 ['_trackEvent','category','action'],
-['trkr0._setAccount','UA-123123-3'],
+['trkr0._setAccount','UA-123123-2'],
 ['trkr0._setDomainName','foo.example.com'],
 ['trkr0._setAllowLinker',true],
 ['trkr0._setCustomVar',6,'author','jonathan',1],
@@ -597,7 +612,7 @@ _gaq.push(
 ['trkr0._trackEvent','Videos','Play','action',47],
 ['trkr0._trackEvent','Videos','Play','action',47,false],
 ['trkr0._trackEvent','category','action'],
-['trkr1._setAccount','UA-123123-2'],
+['trkr1._setAccount','UA-123123-3'],
 ['trkr1._setDomainName','foo.example.com'],
 ['trkr1._setAllowLinker',true],
 ['trkr1._setCustomVar',6,'author','jonathan',1],
@@ -731,8 +746,8 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 ga('create','UA-123123-1','auto');
 ga('require','ecommerce');
 ga('send','pageview');
-ga('ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
-ga('ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('ecommerce:addTransaction',{"affiliation":"analytics.js","id":"1234","revenue":"115.00","shipping":"5.00","tax":"10.00"})
+ga('ecommerce:addItem',{"category":"Green Medium","id":"1234","name":"T-Shirt","price":"100.00","quantity":"1","sku":"DD44"})
 ga('ecommerce:send');
 </script>
 <!-- End Google Analytics -->"""
@@ -841,28 +856,28 @@ ga('linker:autoLink',['foo.example.com']);
 ga('require','ecommerce');
 ga('set',{"dimension9":"jonathan"});
 ga('send','pageview');
-ga('ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
-ga('ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('ecommerce:addTransaction',{"affiliation":"analytics.js","id":"1234","revenue":"115.00","shipping":"5.00","tax":"10.00"})
+ga('ecommerce:addItem',{"category":"Green Medium","id":"1234","name":"T-Shirt","price":"100.00","quantity":"1","sku":"DD44"})
 ga('ecommerce:send');
 ga('send','event','Videos','Play','action',47,{"nonInteraction":true});
 ga('send','event','Videos','Play','action',47);
 ga('send','event','Videos','Play','action',47,{"nonInteraction":false});
 ga('send','event','category','action');
-ga('create','UA-123123-3','auto','trkr0',{"allowLinker":true});
+ga('create','UA-123123-2','auto','trkr0',{"allowLinker":true});
 ga('trkr0.set',{"dimension9":"jonathan"});
 ga('trkr0.send','pageview');
-ga('trkr0.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
-ga('trkr0.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('trkr0.ecommerce:addTransaction',{"affiliation":"analytics.js","id":"1234","revenue":"115.00","shipping":"5.00","tax":"10.00"})
+ga('trkr0.ecommerce:addItem',{"category":"Green Medium","id":"1234","name":"T-Shirt","price":"100.00","quantity":"1","sku":"DD44"})
 ga('trkr0.ecommerce:send');
 ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":true});
 ga('trkr0.send','event','Videos','Play','action',47);
 ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":false});
 ga('trkr0.send','event','category','action');
-ga('create','UA-123123-2','auto','trkr1',{"allowLinker":true});
+ga('create','UA-123123-3','auto','trkr1',{"allowLinker":true});
 ga('trkr1.set',{"dimension9":"jonathan"});
 ga('trkr1.send','pageview');
-ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
-ga('trkr1.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","id":"1234","revenue":"115.00","shipping":"5.00","tax":"10.00"})
+ga('trkr1.ecommerce:addItem',{"category":"Green Medium","id":"1234","name":"T-Shirt","price":"100.00","quantity":"1","sku":"DD44"})
 ga('trkr1.ecommerce:send');
 ga('trkr1.send','event','Videos','Play','action',47,{"nonInteraction":true});
 ga('trkr1.send','event','Videos','Play','action',47);
@@ -882,26 +897,26 @@ ga('require','linker');
 ga('linker:autoLink',['foo.example.com']);
 ga('require','ecommerce');
 ga('send','pageview',{"dimension9":"jonathan"});
-ga('ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
-ga('ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('ecommerce:addTransaction',{"affiliation":"analytics.js","id":"1234","revenue":"115.00","shipping":"5.00","tax":"10.00"})
+ga('ecommerce:addItem',{"category":"Green Medium","id":"1234","name":"T-Shirt","price":"100.00","quantity":"1","sku":"DD44"})
 ga('ecommerce:send');
 ga('send','event','Videos','Play','action',47,{"nonInteraction":true});
 ga('send','event','Videos','Play','action',47);
 ga('send','event','Videos','Play','action',47,{"nonInteraction":false});
 ga('send','event','category','action');
-ga('create','UA-123123-3','auto','trkr0',{"allowLinker":true});
+ga('create','UA-123123-2','auto','trkr0',{"allowLinker":true});
 ga('trkr0.send','pageview',{"dimension9":"jonathan"});
-ga('trkr0.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
-ga('trkr0.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('trkr0.ecommerce:addTransaction',{"affiliation":"analytics.js","id":"1234","revenue":"115.00","shipping":"5.00","tax":"10.00"})
+ga('trkr0.ecommerce:addItem',{"category":"Green Medium","id":"1234","name":"T-Shirt","price":"100.00","quantity":"1","sku":"DD44"})
 ga('trkr0.ecommerce:send');
 ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":true});
 ga('trkr0.send','event','Videos','Play','action',47);
 ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":false});
 ga('trkr0.send','event','category','action');
-ga('create','UA-123123-2','auto','trkr1',{"allowLinker":true});
+ga('create','UA-123123-3','auto','trkr1',{"allowLinker":true});
 ga('trkr1.send','pageview',{"dimension9":"jonathan"});
-ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
-ga('trkr1.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","id":"1234","revenue":"115.00","shipping":"5.00","tax":"10.00"})
+ga('trkr1.ecommerce:addItem',{"category":"Green Medium","id":"1234","name":"T-Shirt","price":"100.00","quantity":"1","sku":"DD44"})
 ga('trkr1.ecommerce:send');
 ga('trkr1.send','event','Videos','Play','action',47,{"nonInteraction":true});
 ga('trkr1.send','event','Videos','Play','action',47);
@@ -1025,7 +1040,7 @@ gtag('config','UA-123123-1');
   gtag('js', new Date());
 
 gtag('config','UA-123123-1');
-gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00","id":"DD44","name":"T-Shirt","quantity":"1"}],"tax":"10.00","shipping":"5.00","affiliation":"analytics.js","value":"115.00","transaction_id":"1234"}
+gtag('event', 'purchase', {"affiliation":"analytics.js","items":[{"category":"Green Medium","id":"DD44","name":"T-Shirt","price":"100.00","quantity":"1"}],"shipping":"5.00","tax":"10.00","transaction_id":"1234","value":"115.00"}
 </script>
 <!-- End Google Analytics -->"""
 
@@ -1060,9 +1075,9 @@ gtag('config','UA-123123-1',{"linker":{"domains":["foo.example.com","bar.example
   gtag('js', new Date());
 
 gtag('config','UA-123123-1');
-gtag('event','Play',{"non_interaction":true,"event_label":"action","event_category":"Videos","value":47}
-gtag('event','Play',{"event_label":"action","event_category":"Videos","value":47}
-gtag('event','Play',{"non_interaction":false,"event_label":"action","event_category":"Videos","value":47}
+gtag('event','Play',{"event_category":"Videos","event_label":"action","non_interaction":true,"value":47}
+gtag('event','Play',{"event_category":"Videos","event_label":"action","value":47}
+gtag('event','Play',{"event_category":"Videos","event_label":"action","non_interaction":false,"value":47}
 gtag('event','action',{"event_category":"category"}
 </script>
 <!-- End Google Analytics -->"""
@@ -1141,13 +1156,13 @@ gtag('event','pageview',{"name":"jonathan"});
   gtag('js', new Date());
 
 gtag('set',{"name":"jonathan"});
-gtag('config','UA-123123-1',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
-gtag('config','UA-123123-3',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
-gtag('config','UA-123123-2',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
-gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00","id":"DD44","name":"T-Shirt","quantity":"1"}],"tax":"10.00","shipping":"5.00","affiliation":"analytics.js","value":"115.00","transaction_id":"1234"}
-gtag('event','Play',{"non_interaction":true,"event_label":"action","event_category":"Videos","value":47}
-gtag('event','Play',{"event_label":"action","event_category":"Videos","value":47}
-gtag('event','Play',{"non_interaction":false,"event_label":"action","event_category":"Videos","value":47}
+gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"linker":{"domains":["foo.example.com"]}});
+gtag('config','UA-123123-2',{"custom_map":{"dimension9":"name"},"linker":{"domains":["foo.example.com"]}});
+gtag('config','UA-123123-3',{"custom_map":{"dimension9":"name"},"linker":{"domains":["foo.example.com"]}});
+gtag('event', 'purchase', {"affiliation":"analytics.js","items":[{"category":"Green Medium","id":"DD44","name":"T-Shirt","price":"100.00","quantity":"1"}],"shipping":"5.00","tax":"10.00","transaction_id":"1234","value":"115.00"}
+gtag('event','Play',{"event_category":"Videos","event_label":"action","non_interaction":true,"value":47}
+gtag('event','Play',{"event_category":"Videos","event_label":"action","value":47}
+gtag('event','Play',{"event_category":"Videos","event_label":"action","non_interaction":false,"value":47}
 gtag('event','action',{"event_category":"category"}
 </script>
 <!-- End Google Analytics -->"""
@@ -1159,14 +1174,14 @@ gtag('event','action',{"event_category":"category"}
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
-gtag('config','UA-123123-1',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
-gtag('config','UA-123123-3',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
-gtag('config','UA-123123-2',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
+gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"linker":{"domains":["foo.example.com"]}});
+gtag('config','UA-123123-2',{"custom_map":{"dimension9":"name"},"linker":{"domains":["foo.example.com"]}});
+gtag('config','UA-123123-3',{"custom_map":{"dimension9":"name"},"linker":{"domains":["foo.example.com"]}});
 gtag('event','pageview',{"name":"jonathan"});
-gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00","id":"DD44","name":"T-Shirt","quantity":"1"}],"tax":"10.00","shipping":"5.00","affiliation":"analytics.js","value":"115.00","transaction_id":"1234"}
-gtag('event','Play',{"non_interaction":true,"event_label":"action","event_category":"Videos","value":47}
-gtag('event','Play',{"event_label":"action","event_category":"Videos","value":47}
-gtag('event','Play',{"non_interaction":false,"event_label":"action","event_category":"Videos","value":47}
+gtag('event', 'purchase', {"affiliation":"analytics.js","items":[{"category":"Green Medium","id":"DD44","name":"T-Shirt","price":"100.00","quantity":"1"}],"shipping":"5.00","tax":"10.00","transaction_id":"1234","value":"115.00"}
+gtag('event','Play',{"event_category":"Videos","event_label":"action","non_interaction":true,"value":47}
+gtag('event','Play',{"event_category":"Videos","event_label":"action","value":47}
+gtag('event','Play',{"event_category":"Videos","event_label":"action","non_interaction":false,"value":47}
 gtag('event','action',{"event_category":"category"}
 </script>
 <!-- End Google Analytics -->"""
@@ -1224,5 +1239,3 @@ class TestSetup(unittest.TestCase):
         self.assertTrue(writer.single_push)
         self.assertTrue(writer.force_ssl)
         self.assertFalse(writer.global_custom_data)
-
-

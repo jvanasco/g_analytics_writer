@@ -45,7 +45,10 @@ def includeme(config):
 
     gtag_dimensions_strategy = config_settings.get('g_analytics_writer.gtag_dimensions_strategy')
     if gtag_dimensions_strategy is not None:
-        kwargs['gtag_dimensions_strategy'] = asbool(gtag_dimensions_strategy)
+        gtag_dimensions_strategy = int(gtag_dimensions_strategy)
+        if gtag_dimensions_strategy not in GtagDimensionsStrategy._valid:
+            raise ValueError("Invalid GtagDimensionsStrategy for AnalyticsWriter: g_analytics_writer.gtag_dimensions_strategy")
+        kwargs['gtag_dimensions_strategy'] = gtag_dimensions_strategy
 
     log.debug("parsed setup for g_analytics_writer: %s" % kwargs)
 

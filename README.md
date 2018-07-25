@@ -19,7 +19,7 @@ This package strives to create as few calls to the google servers as possible.
 
 AnalyticsWriter objects simply contain various bits of data in an internal format, and then prints them out in the correct order via a helper functions for each format.
 
-The goal of this project is to simplify migration across versions.
+The goal of this project is to simplify migration across versions. You tell this package what you want to track and how, it will figure out how to do that in Google Analytics!
 
 If you're just using simple track pageviews, this package is likely overkill
 

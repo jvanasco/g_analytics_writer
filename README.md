@@ -69,15 +69,15 @@ transactions and events are all slightly different across versions
 
 # History
 
-this pacakge replaces the following packages,
+this package replaces the following packages,
 
 * `gaq_hub`
-	* https://github.com/jvanasco/gaq_hub
-	* `gaq_hub` supported `ga.js`
-	* tags in this repository UNDER 0.2 are the old `gaq_hub` codebase
-	* `gaq_hub`, replaced
-		* pyramid_gaq - https://github.com/jvanasco/pyramid_gaq
-		* pylons_gaq  - https://github.com/jvanasco/pylons_gaq | pylons support was ended in the 0.2.0 release
+    * https://github.com/jvanasco/gaq_hub
+    * `gaq_hub` supported `ga.js`
+    * tags in this repository UNDER 0.2 are the old `gaq_hub` codebase
+    * `gaq_hub`, replaced
+        * pyramid_gaq - https://github.com/jvanasco/pyramid_gaq
+        * pylons_gaq  - https://github.com/jvanasco/pylons_gaq | pylons support was ended in the 0.2.0 release
 
 
 # QuickStart
@@ -97,9 +97,9 @@ that's really about it
 
 The available modes are:
 
-	AnalyticsMode.GA_JS - legacy `ga.js`
-	AnalyticsMode.ANALYTICS - current/deprecated `analytics.js`
-	AnalyticsMode.GTAG - current/future `gtag.js`
+    AnalyticsMode.GA_JS - legacy `ga.js`
+    AnalyticsMode.ANALYTICS - current/deprecated `analytics.js`
+    AnalyticsMode.GTAG - current/future `gtag.js`
 
 The default is currently `AnalyticsMode.ANALYTICS`, which has the smallest amount of network traffic.
 
@@ -110,34 +110,34 @@ The default is currently `AnalyticsMode.ANALYTICS`, which has the smallest amoun
 
 the `Pyramid` helpers simply manage a `AnalyticsWriter` object in the request.gaq namespace
 
-	environment.ini - required
+    environment.ini - required
 
-		g_analytics_writer.account_id = UA-123412341234-1234
+        g_analytics_writer.account_id = UA-123412341234-1234
 
-	environment.ini - optional
-	
-		g_analytics_writer.mode = <INT references AnalyticsMode>
-		g_analytics_writer.use_comments = <BOOLEAN>
-		g_analytics_writer.single_push = <BOOLEAN only for ga.js>
-		g_analytics_writer.force_ssl = <BOOLEAN>
-		g_analytics_writer.global_custom_data = <BOOLEAN>
-		g_analytics_writer.gtag_dimensions_strategy = <BOOLEAN>
+    environment.ini - optional
+    
+        g_analytics_writer.mode = <INT references AnalyticsMode>
+        g_analytics_writer.use_comments = <BOOLEAN>
+        g_analytics_writer.single_push = <BOOLEAN only for ga.js>
+        g_analytics_writer.force_ssl = <BOOLEAN>
+        g_analytics_writer.global_custom_data = <BOOLEAN>
+        g_analytics_writer.gtag_dimensions_strategy = <BOOLEAN>
 
-	this way you can have different reporting environments...
+    this way you can have different reporting environments...
 
-		dev.ini
-			g_analytics_writer.account_id_ = U-123449-2
+        dev.ini
+            g_analytics_writer.account_id_ = U-123449-2
 
-		production.ini
-			g_analytics_writer.account_id_ = U-123449-1
+        production.ini
+            g_analytics_writer.account_id_ = U-123449-1
 
 
-	__init__.py:
+    __init__.py:
 
-		def main(global_config, **settings):
-			...
-			# custom gaq
-			config.include("g_analytics_writer.pyramid_integration")
+        def main(global_config, **settings):
+            ...
+            # custom gaq
+            config.include("g_analytics_writer.pyramid_integration")
 
 
 ## When you want to set a custom variable , or anything similar...
@@ -149,28 +149,28 @@ the `Pyramid` helpers simply manage a `AnalyticsWriter` object in the request.ga
 
 For `analytics.js` the recommended configuration option is:
 
-	`global_custom_data=True`
+    `global_custom_data=True`
 
 This will issue a global `set` for all trackers before the `pageview`
 
-	ga('create','UA-123123-1','auto');
-	ga('set',{"dimension9":"jonathan"});
-	ga('send','pageview');
+    ga('create','UA-123123-1','auto');
+    ga('set',{"dimension9":"jonathan"});
+    ga('send','pageview');
 
 For `gtag.js` the recommended configuration option is:
 
-	`global_custom_data=True`
+    `global_custom_data=True`
 
 This will issue a global `set` *BEFORE* issuing the config, which will automatically trigger pageviews
 
-	gtag('set',{"name":"jonathan"});
-	gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
+    gtag('set',{"name":"jonathan"});
+    gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
 
 Toggling configurations can generate this:
 
-	gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"send_page_view":false});
-	gtag('set',{"name":"jonathan"});
-	gtag('event','pageview');
+    gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"send_page_view":false});
+    gtag('set',{"name":"jonathan"});
+    gtag('event','pageview');
 
 ## To print this out..
 

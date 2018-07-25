@@ -30,7 +30,7 @@ but if you're using any of this functionality, then its for you:
 * ecommerce tracking
 * rolling up multiple domains into 1 reporting suite
 
-This package lets you set Goog code wherever needed, and renders everything in the 'correct' order.
+This package lets you set Google code wherever needed, and renders everything in the 'correct' order.
 
 Every command has extensive docstrings, which also include, credit, and link to the relevant sections of the official GoogleAnalytics API docs.
 
@@ -178,7 +178,7 @@ In my mako templates, I just have this...
 
     <head>
     ...
-    ${request.g_analytics_writer.as_html()|n}
+    ${request.g_analytics_writer.render()|n}
     ...
     </head>
 

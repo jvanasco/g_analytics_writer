@@ -2,9 +2,9 @@ g_analytics_writer gives lightweight support for writing optimized Google Analyt
 
 It offers a `AnalyticsWriter` object, which provides a standard API to authoring multiple Google Analytics tracking formats:
 
-* ga.js (historical legacy)
-* analytics.js (current/deprecated)
-* gtag.js (current/future)
+* `ga.js` (historical legacy)
+* `analytics.js` (current/deprecated)
+* `gtag.js` (current/future)
 
 It also offers helper packages for the `Pyramid` framework, which can automate managing `AnalyticsWriter` objects
 
@@ -42,17 +42,17 @@ Every command has extensive docstrings, which also include, credit, and link to 
 * Custom Variables
 * eCommerce
 * Event Tracking
-* Session Unification/userId (ga.js only)
+* Session Unification/userId (`analytics.js` only)
 
 # History
 
 this pacakge replaces the following packages,
 
-* gaq_hub
+* `gaq_hub`
 	* https://github.com/jvanasco/gaq_hub
-	* gaq_hub supported ga.js
-	* tags in this repository UNDER 0.2 are the old gaq_hub codebase
-	* gaq_hub, replaced
+	* `gaq_hub` supported `ga.js`
+	* tags in this repository UNDER 0.2 are the old `gaq_hub` codebase
+	* `gaq_hub`, replaced
 		* pyramid_gaq - https://github.com/jvanasco/pyramid_gaq
 		* pylons_gaq  - https://github.com/jvanasco/pylons_gaq | pylons support was ended in the 0.2.0 release
 

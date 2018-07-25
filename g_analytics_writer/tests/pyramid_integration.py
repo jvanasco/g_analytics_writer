@@ -146,11 +146,23 @@ class _TestPageviews(_TestHarness):
     """
     _gwriter_mode = None  # reset to Null
     data__test_pageview__html = None
+    data__test_pageview_alt__html = None
 
     def test_render_page(self):
         """test the request property worked"""
         as_html = self.request.g_analytics_writer.render()
         self.assertEqual(as_html, self.data__test_pageview__html)
+
+    def test_render_pageview_alt(self):
+        """test the request property worked"""
+        self.request.g_analytics_writer.set_custom_variable(1, 'section', 'account')
+        self.request.g_analytics_writer.set_custom_variable(2, 'pagetype', '-')
+        self.request.g_analytics_writer.set_custom_variable(5, 'is_known_user', '1', 1)  # 1 (visitor-level), 2 (session-level), or 3 (page-level)
+
+        # overwrite
+        self.request.g_analytics_writer.set_custom_variable(2, 'pagetype', 'home')
+        as_html = self.request.g_analytics_writer.render()
+        self.assertEqual(as_html, self.data__test_pageview_alt__html)
 
 
 class TestGA(_TestPageviews, unittest.TestCase):
@@ -161,6 +173,22 @@ class TestGA(_TestPageviews, unittest.TestCase):
 <script type="text/javascript">
 var _gaq = _gaq || [];
 _gaq.push(['_setAccount','UA-12345678987654321-12']);
+_gaq.push(['_trackPageview']);
+(function() {
+var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
+var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+</script>
+<!-- End Google Analytics -->"""
+    data__test_pageview_alt__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+var _gaq = _gaq || [];
+_gaq.push(['_setAccount','UA-12345678987654321-12']);
+_gaq.push(['_setCustomVar',1,'section','account']);
+_gaq.push(['_setCustomVar',2,'pagetype','home']);
+_gaq.push(['_setCustomVar',5,'is_known_user','1',1]);
 _gaq.push(['_trackPageview']);
 (function() {
 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
@@ -185,6 +213,18 @@ ga('create','UA-12345678987654321-12','auto');
 ga('send','pageview');
 </script>
 <!-- End Google Analytics -->"""
+    data__test_pageview_alt__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-12345678987654321-12','auto');
+ga('set',{"dimension1":"account","dimension2":"home","dimension5":"1"});
+ga('send','pageview');
+</script>
+<!-- End Google Analytics -->"""
 
 
 class TestGtag(_TestPageviews, unittest.TestCase):
@@ -201,3 +241,41 @@ class TestGtag(_TestPageviews, unittest.TestCase):
 gtag('config','UA-12345678987654321-12');
 </script>
 <!-- End Google Analytics -->"""
+    data__test_pageview_alt__html = """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-12345678987654321-12"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('set',{"section":"account","pagetype":"home","is_known_user":"1"});
+gtag('config','UA-12345678987654321-12',{"custom_map":{"dimension1":"section","dimension2":"pagetype","dimension5":"is_known_user"}});
+</script>
+<!-- End Google Analytics -->"""
+
+
+class TestAnalytics_Case1(TestAnalytics, unittest.TestCase):
+    _gwriter_mode = 2
+    _gwriter_use_comments = False
+    _gwriter_global_custom_data = True
+    # --
+    data__test_pageview__html = """\
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-12345678987654321-12','auto');
+ga('send','pageview');
+</script>"""
+    data__test_pageview_alt__html = """\
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-12345678987654321-12','auto');
+ga('set',{"dimension1":"account","dimension2":"home","dimension5":"1"});
+ga('send','pageview');
+</script>"""

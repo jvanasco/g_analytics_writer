@@ -44,6 +44,28 @@ Every command has extensive docstrings, which also include, credit, and link to 
 * Event Tracking
 * Session Unification/userId (`analytics.js` only)
 
+
+# what's the difference between all these tracking versions?
+
+There are a few big differences:
+
+## custom variables
+
+1. The legacy `ga.js` did not require pre-configuring the admin(online) dashboard with custom dimensions. everything was configured on the tag, from the 'name' to the 'scope'.  sending data to their servers was in the form of: `_gaq.push(['_setCustomVar',1,'pagetype','account']);`.
+2. The `analytics.js` version requires the dashboard to be pre-configured with custom dimensions. Note the form of  `ga('send','pageview',{"dimension1":"account"})` does not include the `pagetype` label, only the value `account`.
+3. The `gat.js` version requires the dashboard to be pre-configured with custom dimensions and also requires a `custom_map`. Note the form of  `gtag('set',{"section":"account","pagetype":"home","is_known_user":"1"}); gtag('config','UA-12345678987654321-12',{"custom_map":{"dimension1":"section","dimension2":"pagetype","dimension5":"is_known_user"}});` sets the `pagetype` label,however that is not transmitted to their server - it is only used locally for translation.
+
+## order of execution and automatic pageviews
+
+1. `ga.js` requires a manual `_trackPageview`, so it is easy to populate the pageview with custom variables.
+2. `analytics.js` requires a manual `'send','pageview'`, so it is easy to populate the pageview with custom variables.
+2. `gtag.js` automates `'send','pageview'`. in order to populate the pageview with custom variables, we must either pre-populate the tracker with global variables OR disable the initial pageview and send a `pageview` "event" to their servers.
+
+## and more
+
+transactions and events are all slightly different across versions
+
+
 # History
 
 this pacakge replaces the following packages,
@@ -96,7 +118,7 @@ the `Pyramid` helpers simply manage a `AnalyticsWriter` object in the request.ga
 		g_analytics_writer.mode = <INT references AnalyticsMode>
 		g_analytics_writer.use_comments = <BOOLEAN>
 		g_analytics_writer.single_push = <BOOLEAN only for ga.js>
-		g_analytics_writer.force_ssl_ = <BOOLEAN>
+		g_analytics_writer.force_ssl = <BOOLEAN>
 		g_analytics_writer.global_custom_data = <BOOLEAN>
 		g_analytics_writer.gtag_dimensions_strategy = <BOOLEAN>
 

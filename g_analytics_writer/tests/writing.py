@@ -30,6 +30,8 @@ class CoreTests(object):
 
     mode = None
     _test_single_push = None
+    data_gtag_dimensions_strategies = None
+    data_global_custom_data = None
 
     def test_pageview(self):
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
@@ -162,6 +164,30 @@ class CoreTests(object):
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_custom_variables__html)
+
+        if self.data_gtag_dimensions_strategies:
+            # cache for reset
+            _existing = writer._gtag_dimensions_strategy
+            for (strategy, expected_html) in self.data_gtag_dimensions_strategies:
+                writer._gtag_dimensions_strategy = strategy
+                as_html = writer.render()
+                if PRINT_RENDERS:
+                    print(as_html)
+                self.assertEqual(as_html, expected_html)
+            # reset
+            writer._gtag_dimensions_strategy = _existing
+
+        if self.data_global_custom_data:
+            # cache for reset
+            _existing = writer.global_custom_data
+            for (strategy, expected_html) in self.data_global_custom_data:
+                writer.global_custom_data = strategy
+                as_html = writer.render()
+                if PRINT_RENDERS:
+                    print(as_html)
+                self.assertEqual(as_html, expected_html)
+            # reset
+            writer.global_custom_data = _existing
 
         writer.global_custom_data = True
         as_html_global = writer.render()
@@ -715,6 +741,31 @@ ga('create','UA-123123-1','auto');
 ga('send','pageview',{"dimension9":"jonathan"});
 </script>
 <!-- End Google Analytics -->"""
+    data_global_custom_data = (
+        (True, '''\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-123123-1','auto');
+ga('set',{"dimension9":"jonathan"});
+ga('send','pageview');
+</script>
+<!-- End Google Analytics -->'''),
+        (False, '''\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-123123-1','auto');
+ga('send','pageview',{"dimension9":"jonathan"});
+</script>
+<!-- End Google Analytics -->'''),
+    )
     data__test_custom_variables__global__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -974,10 +1025,37 @@ gtag('event','action',{"event_category":"category"}
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
+gtag('set',{"name":"jonathan"});
 gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
-gtag('event','pageview',{"name":"jonathan"});
 </script>
 <!-- End Google Analytics -->"""
+    data_gtag_dimensions_strategies = (
+        (1, """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('set',{"name":"jonathan"});
+gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
+</script>
+<!-- End Google Analytics -->"""),
+        (2, """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"send_page_view":false});
+gtag('set',{"name":"jonathan"});
+gtag('event','pageview');
+</script>
+<!-- End Google Analytics -->"""),
+    )
     data__test_custom_variables__global__html = data__test_custom_variables__html
     data__test_advanced__html = """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
@@ -987,10 +1065,10 @@ gtag('event','pageview',{"name":"jonathan"});
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
+gtag('set',{"name":"jonathan"});
 gtag('config','UA-123123-1',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
 gtag('config','UA-123123-3',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
 gtag('config','UA-123123-2',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
-gtag('event','pageview',{"name":"jonathan"});
 gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00","id":"DD44","name":"T-Shirt","quantity":"1"}],"tax":"10.00","shipping":"5.00","affiliation":"analytics.js","value":"115.00","transaction_id":"1234"}
 gtag('event','Play',{"non_interaction":true,"event_label":"action","event_category":"Videos","value":47}
 gtag('event','Play',{"event_label":"action","event_category":"Videos","value":47}

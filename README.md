@@ -1,26 +1,25 @@
-g_analytics_writer gives lightweight support for writing Google Analytics
+g_analytics_writer gives lightweight support for writing optimized Google Analytics
 
-This is a prerelease and I am actively working on a proper release.
+It offers a AnalyticsWriter object, which provides a standard API to authoring multiple Google Analytics tracking formats:
 
-It offers a AnalyticsWriter object, which offers a standard API to multiple Google Analytics tracking formats:
-
-* ga.js (historical format)
-* analytics.js (current)
-* gtag.js (planned)
+* ga.js (historical legacy)
+* analytics.js (current/deprecated)
+* gtag.js (current/future)
 
 It also offers helper packages for the pyramid framework, which can automate managing AnalyticsWriter objects
 
 The package is designed to work with MVC/MVT/MCT/etc systems:
+
 * Python should populate all the tracking data, then render everything at once.
 * Applications should invoke this library with 'what I want to do', and this library will figure out how best to do it.
 
 This is not designed to iteratively generate a tagging, but instead to generate everything at once, as optimized as possible. 
-	
+
+This package strives to create as few calls to the google servers as possible.
 
 AnalyticsWriter objects simply contain various bits of data in an internal format, and then prints them out in the correct order via a helper functions for each format.
 
 The goal of this project is to simplify migration across versions.
-
 
 If you're just using simple track pageviews, this package is likely overkill
 
@@ -101,6 +100,33 @@ the pyramid helpers simply manage a AnalyticsWriter object in the request.gaq na
 
     request.analytics_writer.setCustomVar(1, 'TemplateVersion', 'A', 3)
 
+
+## Rendering Optimized Variables
+
+For `analytics.js` the recommended configuration option is:
+
+	`global_custom_data=True`
+
+This will issue a global `set` for all trackers before the `pageview`
+
+	ga('create','UA-123123-1','auto');
+	ga('set',{"dimension9":"jonathan"});
+	ga('send','pageview');
+
+For `gtag.js` the recommended configuration option is:
+
+	`default`
+
+This will issue a global `set` *BEFORE* issuing the config, which will automatically trigger pageviews
+
+	gtag('set',{"name":"jonathan"});
+	gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
+
+Toggling configurations can generate this:
+
+	gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"send_page_view":false});
+	gtag('set',{"name":"jonathan"});
+	gtag('event','pageview');
 
 ## To print this out..
 

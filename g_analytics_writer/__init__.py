@@ -251,6 +251,7 @@ class AnalyticsWriter(object):
     global_custom_data = None
     use_comments = True
     force_ssl = None
+    _gtag_dimensions_strategy = 1  # 1=set+config; 2=config.noPageview+set+event.Pageview
 
     def __init__(
         self,
@@ -310,7 +311,7 @@ class AnalyticsWriter(object):
                 force a html connection on http connections.
             :global_custom_data
                 BOOLEAN
-                default: None
+                default: True
                 If ``True``, will register the custom metrics/data for all page hits.
                 This is only supported on `analytics.js`; `gtag.js` does not seem to have an option
         """
@@ -491,6 +492,36 @@ class AnalyticsWriter(object):
 
         There are slight differences in how this is handled:
 
+
+        gtag.js
+        -------
+
+        Overview:
+
+            This was a bit of a pain. Sending the dimensions along with the pageview was hard.
+
+            Ultimately, there were two options:
+
+            A: `set` before `config`
+            ________________________
+
+            This pre-configures the tracker before `config`
+
+                gtag('set',{"pagetype":"A","section":"B","author":"C"});
+                gtag('config','UA-28767097-2',{"custom_map":{"dimension3":"author","dimension2":"pagetype","dimension1":"section"}});
+
+            B: `config` without pageview, `set`, `event:pageview`
+            ________________________
+
+            This disables the default pageview, then manually triggers it
+
+                gtag('config','UA-28767097-2',{
+                     "send_page_view":false,
+                     "custom_map":{"dimension3":"author","dimension2":"pagetype","dimension1":"section"}});
+                gtag('set',{"pagetype":"A","section":"B","author":"C"});
+                gtag('event','pageview');
+
+
         analytics.js
         ------------
 
@@ -502,10 +533,13 @@ class AnalyticsWriter(object):
 
             `name` + `scope` combinations are configured in the (online) admin dashboard as "dimensions"
 
-            The dimension is then set into the tracker instance:
+            The dimension is then set into the tracker instance and used throughout the tracker's lifetime
 
                 ga('set','dimension1','Paid');
-
+                ga('set', {
+                  'dimension5': 'custom dimension data',
+                  'metric5': 'custom metric data'
+                });
             or they are sent in as pagedata:
 
                 ga('send','pageview',{"dimension1":"Paid"});
@@ -1646,6 +1680,13 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             create_args['custom_map'] = custom_map
             jsons_custom_values = custom_dumps(custom_values)
 
+        if jsons_custom_values:
+            # if we have custom_variables, set before config
+            if self._gtag_dimensions_strategy == 1:
+                script.append("""gtag('set',%s);""" % jsons_custom_values)
+            elif self._gtag_dimensions_strategy == 2:
+                create_args['send_page_view'] = False
+
         # set the main account_id config
         if not create_args:
             script.append("""gtag('config','%s');""" % account_id)
@@ -1659,8 +1700,10 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 
         # if we have custom_variables, they're done via a config update + event
         if jsons_custom_values:
-            # this works for to all?
-            script.append("""gtag('event','pageview',%s);""" % jsons_custom_values)
+            if self._gtag_dimensions_strategy == 2:
+                script.append("""gtag('set',%s);""" % jsons_custom_values)
+                # the gtag() event automatically tracks a pageview, which we disabled, so this must be sent in an event of `pageview`
+                script.append("""gtag('event','pageview');""")
 
         # ecommerce
         if self.data_struct['*transaction']:

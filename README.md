@@ -55,6 +55,7 @@ There are a few big differences:
 2. The `analytics.js` version requires the dashboard to be pre-configured with custom dimensions. Note the form of  `ga('send','pageview',{"dimension1":"account"})` does not include the `pagetype` label, only the value `account`.
 3. The `gat.js` version requires the dashboard to be pre-configured with custom dimensions and also requires a `custom_map`. Note the form of  `gtag('set',{"section":"account","pagetype":"home","is_known_user":"1"}); gtag('config','UA-12345678987654321-12',{"custom_map":{"dimension1":"section","dimension2":"pagetype","dimension5":"is_known_user"}});` sets the `pagetype` label,however that is not transmitted to their server - it is only used locally for translation.
 
+
 ## order of execution and automatic pageviews
 
 1. `ga.js` requires a manual `_trackPageview`, so it is easy to populate the pageview with custom variables.

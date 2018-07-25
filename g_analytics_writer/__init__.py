@@ -58,7 +58,15 @@ class AnalyticsMode(object):
                     GTAG,
                     )
     _supports_single_push = (GA_JS, )
-    _ANALYTICS_fieldobject = 'fo'  # used as a unique value in `transaction_mapping`
+
+
+class GtagDimensionsStrategy(object):
+    SET_CONFIG = 1
+    CONFIGNOPAGEVIEW_SET_EVENT = 2
+
+    _valid = (SET_CONFIG,
+              CONFIGNOPAGEVIEW_SET_EVENT,
+              )
 
 
 translation_matrix = {
@@ -245,13 +253,12 @@ INVALID_TAG = InvalidTag()
 
 class AnalyticsWriter(object):
     data_struct = None
-    mode = None
-    modes_support_alternate = None
-    single_push = None
-    global_custom_data = None
+    mode = AnalyticsMode._default
     use_comments = True
+    single_push = False
     force_ssl = None
-    _gtag_dimensions_strategy = 1  # 1=set+config; 2=config.noPageview+set+event.Pageview
+    global_custom_data = True
+    gtag_dimensions_strategy = GtagDimensionsStrategy.SET_CONFIG
 
     def __init__(
         self,
@@ -260,8 +267,8 @@ class AnalyticsWriter(object):
         use_comments=True,
         single_push=False,
         force_ssl=None,
-        modes_support_alternate=None,
-        global_custom_data=None,
+        global_custom_data=True,
+        gtag_dimensions_strategy=GtagDimensionsStrategy.SET_CONFIG,
     ):
         """
         Sets up self.data_struct dict which we use for storage.
@@ -286,12 +293,6 @@ class AnalyticsWriter(object):
                 output type.
                 This can not be changed after instantiation, because it is used
                 by some helper functions.
-            :modes_support_alternate
-                INT or LIST/TUPLE of INTs
-                default: None
-                if alternate modes are supported, the package will try to upgrade
-                incompatible data to the newer formats. Disabling this can
-                optimize Python operations per request.
             :use_comments
                 BOOLEAN
                 default: True
@@ -318,18 +319,15 @@ class AnalyticsWriter(object):
         if mode not in AnalyticsMode._valid_modes:
             raise ValueError("invalid mode")
         self.mode = mode
-        if modes_support_alternate:
-            # convert string/int to iterables
-            if type(modes_support_alternate) not in (list, tuple):
-                modes_support_alternate = (modes_support_alternate, )
-            self.modes_support_alternate = modes_support_alternate
         self.use_comments = use_comments
         self.single_push = single_push
-        self.global_custom_data = global_custom_data  # this is public!
-
+            
         # `ga.js` allows a force of ssl
         # https://developers.google.com/analytics/devguides/collection/gajs/#ssl
         self.force_ssl = force_ssl
+
+        self.global_custom_data = global_custom_data  # this is public!
+        self.gtag_dimensions_strategy = gtag_dimensions_strategy
 
         self.data_struct = {
             '*account_id': account_id,
@@ -1186,7 +1184,7 @@ class AnalyticsWriter(object):
             if _single_push:
                 nested_script.append(formatted)
             else:
-                script.append(u"""%s_gaq.push(%s);""" % (tracker_prefix, formatted))
+                script.append(u"""_gaq.push(%s);""" % formatted)
 
         if _single_push:
             nested_script.append(u"""['%s_trackPageview']""" % tracker_prefix)
@@ -1463,7 +1461,8 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 
         if self.global_custom_data:
             # update the entire tracker
-            script.append(u"""ga('%sset',%s);""" % (tracker_prefix, custom_dumps(custom_data)))
+            if custom_data:
+                script.append(u"""ga('%sset',%s);""" % (tracker_prefix, custom_dumps(custom_data)))
         else:
             # update our pagedata items
             # pagehit_data.update(custom_data)
@@ -1682,9 +1681,10 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 
         if jsons_custom_values:
             # if we have custom_variables, set before config
-            if self._gtag_dimensions_strategy == 1:
-                script.append("""gtag('set',%s);""" % jsons_custom_values)
-            elif self._gtag_dimensions_strategy == 2:
+            if self.gtag_dimensions_strategy == GtagDimensionsStrategy.SET_CONFIG:
+                if self.global_custom_data:
+                    script.append("""gtag('set',%s);""" % jsons_custom_values)
+            elif self.gtag_dimensions_strategy == GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT:
                 create_args['send_page_view'] = False
 
         # set the main account_id config
@@ -1700,10 +1700,19 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 
         # if we have custom_variables, they're done via a config update + event
         if jsons_custom_values:
-            if self._gtag_dimensions_strategy == 2:
-                script.append("""gtag('set',%s);""" % jsons_custom_values)
-                # the gtag() event automatically tracks a pageview, which we disabled, so this must be sent in an event of `pageview`
-                script.append("""gtag('event','pageview');""")
+            if self.gtag_dimensions_strategy == GtagDimensionsStrategy.SET_CONFIG:
+                if self.global_custom_data:
+                    pass
+                else:
+                    script.append("""gtag('event','pageview',%s);""" % jsons_custom_values)
+            elif self.gtag_dimensions_strategy == GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT:
+                if self.global_custom_data:
+                    if jsons_custom_values:
+                        script.append("""gtag('set',%s);""" % jsons_custom_values)
+                    # the gtag() event automatically tracks a pageview, which we disabled, so this must be sent in an event of `pageview`
+                    script.append("""gtag('event','pageview');""")
+                else:
+                    script.append("""gtag('event','pageview',%s);""" % jsons_custom_values)
 
         # ecommerce
         if self.data_struct['*transaction']:

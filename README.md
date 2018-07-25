@@ -1,6 +1,6 @@
-g_analytics_writer gives lightweight support for writing optimized Google Analytics
+g_analytics_writer gives lightweight support for writing optimized "Google Analytics" tracking code for those times when you need to use The Great Satan, even though you would prefer not to.
 
-It offers a `AnalyticsWriter` object, which provides a standard API to authoring multiple Google Analytics tracking formats:
+It offers a `AnalyticsWriter` object, which provides a standard API to authoring multiple "Google Analytics" tracking formats:
 
 * `ga.js` (historical legacy)
 * `analytics.js` (current/deprecated)
@@ -19,7 +19,7 @@ This package strives to create as few calls to the google servers as possible.
 
 `AnalyticsWriter` objects simply contain various bits of data in an internal format, and then prints them out in the correct order via a helper functions for each format.
 
-The goal of this project is to simplify migration across versions. You tell this package what you want to track and how, it will figure out how to do that in Google Analytics!
+The goal of this project is to simplify migration across versions. You tell this package what you want to track and how, it will figure out how to do that in "Google Analytics"!
 
 If you're just using simple track pageviews, this package is likely overkill
 
@@ -70,14 +70,35 @@ this pacakge replaces the following packages,
 that's really about it
 
 
+# AVAILABLE MODES
+
+The available modes are:
+
+	AnalyticsMode.GA_JS - legacy `ga.js`
+	AnalyticsMode.ANALYTICS - current/deprecated `analytics.js`
+	AnalyticsMode.GTAG - current/future `gtag.js`
+
+The default is currently `AnalyticsMode.ANALYTICS`, which has the smallest amount of network traffic.
+
+`AnalyticsMode.GTAG` has slightly larger network traffic, because the `gtag.js` file actually loads and interacts with the `analytics.js` file.
+
+
 # QuickStart - Pyramid
 
 the `Pyramid` helpers simply manage a `AnalyticsWriter` object in the request.gaq namespace
 
-	environment.ini
+	environment.ini - required
 
-		g_analytics_writer.account_id= UA-123412341234-1234
+		g_analytics_writer.account_id = UA-123412341234-1234
 
+	environment.ini - optional
+	
+		g_analytics_writer.mode = <INT references AnalyticsMode>
+		g_analytics_writer.use_comments = <BOOLEAN>
+		g_analytics_writer.single_push = <BOOLEAN only for ga.js>
+		g_analytics_writer.force_ssl_ = <BOOLEAN>
+		g_analytics_writer.global_custom_data = <BOOLEAN>
+		g_analytics_writer.gtag_dimensions_strategy = <BOOLEAN>
 
 	this way you can have different reporting environments...
 
@@ -115,7 +136,7 @@ This will issue a global `set` for all trackers before the `pageview`
 
 For `gtag.js` the recommended configuration option is:
 
-	`default`
+	`global_custom_data=True`
 
 This will issue a global `set` *BEFORE* issuing the config, which will automatically trigger pageviews
 

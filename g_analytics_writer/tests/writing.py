@@ -2,28 +2,25 @@ from __future__ import print_function
 
 from g_analytics_writer import AnalyticsWriter
 from g_analytics_writer import AnalyticsMode
+from g_analytics_writer import GtagDimensionsStrategy
 # import g_analytics_writer.pyramid_integration
 
 # core testing facility
 import unittest
 import re
+import os
 
 # regexes to test against
 re_refresh_15 = re.compile('<meta http-equiv="refresh" content="15"/>')
 re_other_charset = re.compile('<meta charset="utf8"/>')
 
 # used for writing tests
-PRINT_RENDERS = 1
+# export g_analytics_writer_debug=1
+# export g_analytics_writer_debug=0
+PRINT_RENDERS = bool(int(os.environ.get('g_analytics_writer_debug', 0)))
 
 # pyramid testing requirements
 # from pyramid import testing
-
-"""
-class AnalyticsMode(object):
-    GA_JS = 1
-    ANALYTICS = 2
-    GTAG = 4
-"""
 
 
 class CoreTests(object):
@@ -32,6 +29,7 @@ class CoreTests(object):
     _test_single_push = None
     data_gtag_dimensions_strategies = None
     data_global_custom_data = None
+    data__test_force_ssl = None
 
     def test_pageview(self):
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
@@ -167,15 +165,18 @@ class CoreTests(object):
 
         if self.data_gtag_dimensions_strategies:
             # cache for reset
-            _existing = writer._gtag_dimensions_strategy
-            for (strategy, expected_html) in self.data_gtag_dimensions_strategies:
-                writer._gtag_dimensions_strategy = strategy
+            _existing__gtag_dimensions_strategy = writer.gtag_dimensions_strategy
+            _existing__global_custom_data = writer.global_custom_data
+            for (gtag_dimensions_strategy, global_custom_data, expected_html) in self.data_gtag_dimensions_strategies:
+                writer.gtag_dimensions_strategy = gtag_dimensions_strategy
+                writer.global_custom_data = global_custom_data
                 as_html = writer.render()
                 if PRINT_RENDERS:
                     print(as_html)
                 self.assertEqual(as_html, expected_html)
             # reset
-            writer._gtag_dimensions_strategy = _existing
+            writer.gtag_dimensions_strategy = _existing__gtag_dimensions_strategy
+            writer.global_custom_data = _existing__global_custom_data
 
         if self.data_global_custom_data:
             # cache for reset
@@ -197,6 +198,10 @@ class CoreTests(object):
 
     def test_advanced(self):
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
+        
+        # make sure this is True by default
+        self.assertTrue(writer.global_custom_data)
+        
         (index, name, value, opt_scope) = self.data__custom_variables
         # crossdomain
         writer.set_crossdomain_tracking('foo.example.com')
@@ -213,13 +218,16 @@ class CoreTests(object):
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
+            
+        # by default, these use global data
         self.assertEqual(as_html, self.data__test_advanced__html)
 
-        writer.global_custom_data = True
+        # let's try nonglobal data
+        writer.global_custom_data = False
         as_html_global = writer.render()
         if PRINT_RENDERS:
             print(as_html_global)
-        self.assertEqual(as_html_global, self.data__test_advanced__global__html)
+        self.assertEqual(as_html_global, self.data__test_advanced__nonglobal__html)
 
     def test_advanced_single_push(self):
         if not self._test_single_push:
@@ -271,6 +279,17 @@ class CoreTests(object):
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_userid_postrender_multi__html)
+
+    def test_force_ssl(self):
+        if self.data__test_force_ssl:
+            for (force_ssl, expected_html) in self.data__test_force_ssl:
+                writer = AnalyticsWriter('UA-123123-1', mode=self.mode, force_ssl=force_ssl)
+                as_html = writer.render()
+                if PRINT_RENDERS:
+                    print(as_html)
+                self.assertEqual(as_html, expected_html)
+        else:
+            raise unittest.SkipTest("force_ssl not tested on %s" % self.__class__.__name__)
 
 
 # global dicts used for tests
@@ -520,7 +539,7 @@ _gaq.push(['_trackEvent','category','action']);
 _gaq.push(['trkr0._setAccount','UA-123123-3']);
 _gaq.push(['trkr0._setDomainName','foo.example.com']);
 _gaq.push(['trkr0._setAllowLinker',true]);
-trkr0._gaq.push(['trkr0._setCustomVar',6,'author','jonathan',1]);
+_gaq.push(['trkr0._setCustomVar',6,'author','jonathan',1]);
 _gaq.push(['trkr0._trackPageview']);
 _gaq.push(['trkr0._addTrans','1234','ga.js','100.00','10.00','5.00','brooklyn','new york','usa']);
 _gaq.push(['trkr0._addItem','1234','DD44','T-Shirt','Green Medium','100.00','1']);
@@ -532,7 +551,7 @@ _gaq.push(['trkr0._trackEvent','category','action']);
 _gaq.push(['trkr1._setAccount','UA-123123-2']);
 _gaq.push(['trkr1._setDomainName','foo.example.com']);
 _gaq.push(['trkr1._setAllowLinker',true]);
-trkr1._gaq.push(['trkr1._setCustomVar',6,'author','jonathan',1]);
+_gaq.push(['trkr1._setCustomVar',6,'author','jonathan',1]);
 _gaq.push(['trkr1._trackPageview']);
 _gaq.push(['trkr1._addTrans','1234','ga.js','100.00','10.00','5.00','brooklyn','new york','usa']);
 _gaq.push(['trkr1._addItem','1234','DD44','T-Shirt','Green Medium','100.00','1']);
@@ -548,7 +567,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 })();
 </script>
 <!-- End Google Analytics -->"""
-    data__test_advanced__global__html = data__test_advanced__html
+    data__test_advanced__nonglobal__html = data__test_advanced__html
     data__test_advanced_single_push__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -602,6 +621,36 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
     data__test_userid_prerender_multi__html = data__test_pageview_multi__html
     data__test_userid_postrender__html = ''
     data__test_userid_postrender_multi__html = ''
+    # force_ssl, expected_html
+    data__test_force_ssl = (
+        (False, """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+var _gaq = _gaq || [];
+_gaq.push(['_setAccount','UA-123123-1']);
+_gaq.push(['_trackPageview']);
+(function() {
+var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
+var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+</script>
+<!-- End Google Analytics -->"""),
+        (True, """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+var _gaq = _gaq || [];
+_gaq.push(['_gat._forceSSL']);
+_gaq.push(['_setAccount','UA-123123-1']);
+_gaq.push(['_trackPageview']);
+(function() {
+var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
+var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+</script>
+<!-- End Google Analytics -->"""),
+    )
 
 
 class TestAnalytics(CoreTests, unittest.TestCase):
@@ -738,7 +787,8 @@ ga('send','event','category','action');
 m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
 ga('create','UA-123123-1','auto');
-ga('send','pageview',{"dimension9":"jonathan"});
+ga('set',{"dimension9":"jonathan"});
+ga('send','pageview');
 </script>
 <!-- End Google Analytics -->"""
     data_global_custom_data = (
@@ -789,45 +839,6 @@ ga('create','UA-123123-1','auto',{"allowLinker":true});
 ga('require','linker');
 ga('linker:autoLink',['foo.example.com']);
 ga('require','ecommerce');
-ga('send','pageview',{"dimension9":"jonathan"});
-ga('ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
-ga('ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
-ga('ecommerce:send');
-ga('send','event','Videos','Play','action',47,{"nonInteraction":true});
-ga('send','event','Videos','Play','action',47);
-ga('send','event','Videos','Play','action',47,{"nonInteraction":false});
-ga('send','event','category','action');
-ga('create','UA-123123-3','auto','trkr0',{"allowLinker":true});
-ga('trkr0.send','pageview',{"dimension9":"jonathan"});
-ga('trkr0.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
-ga('trkr0.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
-ga('trkr0.ecommerce:send');
-ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":true});
-ga('trkr0.send','event','Videos','Play','action',47);
-ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":false});
-ga('trkr0.send','event','category','action');
-ga('create','UA-123123-2','auto','trkr1',{"allowLinker":true});
-ga('trkr1.send','pageview',{"dimension9":"jonathan"});
-ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
-ga('trkr1.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
-ga('trkr1.ecommerce:send');
-ga('trkr1.send','event','Videos','Play','action',47,{"nonInteraction":true});
-ga('trkr1.send','event','Videos','Play','action',47);
-ga('trkr1.send','event','Videos','Play','action',47,{"nonInteraction":false});
-ga('trkr1.send','event','category','action');
-</script>
-<!-- End Google Analytics -->"""
-    data__test_advanced__global__html = """\
-<!-- Google Analytics -->
-<script type="text/javascript">
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-ga('create','UA-123123-1','auto',{"allowLinker":true});
-ga('require','linker');
-ga('linker:autoLink',['foo.example.com']);
-ga('require','ecommerce');
 ga('set',{"dimension9":"jonathan"});
 ga('send','pageview');
 ga('ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
@@ -850,6 +861,45 @@ ga('trkr0.send','event','category','action');
 ga('create','UA-123123-2','auto','trkr1',{"allowLinker":true});
 ga('trkr1.set',{"dimension9":"jonathan"});
 ga('trkr1.send','pageview');
+ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
+ga('trkr1.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('trkr1.ecommerce:send');
+ga('trkr1.send','event','Videos','Play','action',47,{"nonInteraction":true});
+ga('trkr1.send','event','Videos','Play','action',47);
+ga('trkr1.send','event','Videos','Play','action',47,{"nonInteraction":false});
+ga('trkr1.send','event','category','action');
+</script>
+<!-- End Google Analytics -->"""
+    data__test_advanced__nonglobal__html = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-123123-1','auto',{"allowLinker":true});
+ga('require','linker');
+ga('linker:autoLink',['foo.example.com']);
+ga('require','ecommerce');
+ga('send','pageview',{"dimension9":"jonathan"});
+ga('ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
+ga('ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('ecommerce:send');
+ga('send','event','Videos','Play','action',47,{"nonInteraction":true});
+ga('send','event','Videos','Play','action',47);
+ga('send','event','Videos','Play','action',47,{"nonInteraction":false});
+ga('send','event','category','action');
+ga('create','UA-123123-3','auto','trkr0',{"allowLinker":true});
+ga('trkr0.send','pageview',{"dimension9":"jonathan"});
+ga('trkr0.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
+ga('trkr0.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
+ga('trkr0.ecommerce:send');
+ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":true});
+ga('trkr0.send','event','Videos','Play','action',47);
+ga('trkr0.send','event','Videos','Play','action',47,{"nonInteraction":false});
+ga('trkr0.send','event','category','action');
+ga('create','UA-123123-2','auto','trkr1',{"allowLinker":true});
+ga('trkr1.send','pageview',{"dimension9":"jonathan"});
 ga('trkr1.ecommerce:addTransaction',{"affiliation":"analytics.js","tax":"10.00","id":"1234","shipping":"5.00","revenue":"115.00"})
 ga('trkr1.ecommerce:addItem',{"sku":"DD44","category":"Green Medium","name":"T-Shirt","price":"100.00","id":"1234","quantity":"1"})
 ga('trkr1.ecommerce:send');
@@ -1029,8 +1079,9 @@ gtag('set',{"name":"jonathan"});
 gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
 </script>
 <!-- End Google Analytics -->"""
+    # gtag_dimensions_strategy, global_custom_data, expected_html
     data_gtag_dimensions_strategies = (
-        (1, """\
+        (GtagDimensionsStrategy.SET_CONFIG, True, """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -1042,7 +1093,19 @@ gtag('set',{"name":"jonathan"});
 gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
 </script>
 <!-- End Google Analytics -->"""),
-        (2, """\
+        (GtagDimensionsStrategy.SET_CONFIG, False, """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
+gtag('event','pageview',{"name":"jonathan"});
+</script>
+<!-- End Google Analytics -->"""),
+        (GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT, True, """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -1053,6 +1116,18 @@ gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
 gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"send_page_view":false});
 gtag('set',{"name":"jonathan"});
 gtag('event','pageview');
+</script>
+<!-- End Google Analytics -->"""),
+        (GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT, False, """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"send_page_view":false});
+gtag('event','pageview',{"name":"jonathan"});
 </script>
 <!-- End Google Analytics -->"""),
     )
@@ -1076,7 +1151,25 @@ gtag('event','Play',{"non_interaction":false,"event_label":"action","event_categ
 gtag('event','action',{"event_category":"category"}
 </script>
 <!-- End Google Analytics -->"""
-    data__test_advanced__global__html = data__test_advanced__html
+    data__test_advanced__nonglobal__html = """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
+gtag('config','UA-123123-3',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
+gtag('config','UA-123123-2',{"linker":{"domains":["foo.example.com"]},"custom_map":{"dimension9":"name"}});
+gtag('event','pageview',{"name":"jonathan"});
+gtag('event', 'purchase', {"items":[{"category":"Green Medium","price":"100.00","id":"DD44","name":"T-Shirt","quantity":"1"}],"tax":"10.00","shipping":"5.00","affiliation":"analytics.js","value":"115.00","transaction_id":"1234"}
+gtag('event','Play',{"non_interaction":true,"event_label":"action","event_category":"Videos","value":47}
+gtag('event','Play',{"event_label":"action","event_category":"Videos","value":47}
+gtag('event','Play',{"non_interaction":false,"event_label":"action","event_category":"Videos","value":47}
+gtag('event','action',{"event_category":"category"}
+</script>
+<!-- End Google Analytics -->"""
     data__test_userid_prerender__html = """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
@@ -1105,3 +1198,31 @@ gtag('config', 'UA-123123-1', {'user_id': 'cecil'});"""
     data__test_userid_postrender_multi__html = """\
 gtag('config', 'UA-123123-1', {'user_id': 'cecil'});
 gtag('config', 'UA-123123-3', {'user_id': 'cecil'});"""
+
+
+class TestSetup(unittest.TestCase):
+
+    def test_defaults(self):
+        writer = AnalyticsWriter('UA-123123-1')
+        self.assertEqual(writer.mode, AnalyticsMode._default)
+        self.assertEqual(AnalyticsMode._default, AnalyticsMode.ANALYTICS)
+        self.assertTrue(writer.use_comments)
+        self.assertFalse(writer.single_push)
+        self.assertIsNone(writer.force_ssl)
+        self.assertTrue(writer.global_custom_data)
+
+    def test_passin(self):
+        writer = AnalyticsWriter('UA-123123-1',
+                                 mode=AnalyticsMode.GA_JS,
+                                 use_comments=False,
+                                 single_push=True,
+                                 force_ssl=True,
+                                 global_custom_data=False,
+                                 )
+        self.assertEqual(writer.mode, AnalyticsMode.GA_JS)
+        self.assertFalse(writer.use_comments)
+        self.assertTrue(writer.single_push)
+        self.assertTrue(writer.force_ssl)
+        self.assertFalse(writer.global_custom_data)
+
+

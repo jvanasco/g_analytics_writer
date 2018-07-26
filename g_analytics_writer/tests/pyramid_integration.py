@@ -249,7 +249,7 @@ gtag('config','UA-12345678987654321-12');
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
-gtag('set',{"section":"account","pagetype":"home","is_known_user":"1"});
+gtag('set',{"is_known_user":"1","pagetype":"home","section":"account"});
 gtag('config','UA-12345678987654321-12',{"custom_map":{"dimension1":"section","dimension2":"pagetype","dimension5":"is_known_user"}});
 </script>
 <!-- End Google Analytics -->"""

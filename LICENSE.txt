@@ -1,6 +1,7 @@
 Portions of the docstrings were authord by, and remain copyright by "Google, Inc."
 
-They appear under a "Creative Commons Attribution 3.0 License"
+They are reproduced courtesy of their "Creative Commons Attribution 3.0 License"
+
 
 -------
 

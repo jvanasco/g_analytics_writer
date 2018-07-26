@@ -183,3 +183,10 @@ In my mako templates, I just have this...
     </head>
 
 Notice that you have to escape under Mako.   For more information on mako escape options - http://www.makotemplates.org/docs/filtering.html
+
+
+## Licensing
+
+This package is made available via the MIT License -- http://www.opensource.org/licenses/mit-license
+
+Content in the docstrings marked "Google Documentation" is copyright by Google and appears under their Creative Commons Attribution 3.0 License

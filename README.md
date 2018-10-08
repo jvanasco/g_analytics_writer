@@ -5,6 +5,7 @@ It offers a `AnalyticsWriter` object, which provides a standard API to authoring
 * `ga.js` (historical legacy)
 * `analytics.js` (current/deprecated)
 * `gtag.js` (current/future)
+* `amp` (accelerated mobile pages plugin)
 
 It also offers helper packages for the `Pyramid` framework, which can automate managing `AnalyticsWriter` objects
 
@@ -54,7 +55,7 @@ There are a few big differences:
 1. The legacy `ga.js` did not require pre-configuring the admin(online) dashboard with custom dimensions. everything was configured on the tag, from the 'name' to the 'scope'.  sending data to their servers was in the form of: `_gaq.push(['_setCustomVar',1,'pagetype','account']);`.
 2. The `analytics.js` version requires the dashboard to be pre-configured with custom dimensions. Note the form of  `ga('send','pageview',{"dimension1":"account"})` does not include the `pagetype` label, only the value `account`.
 3. The `gat.js` version requires the dashboard to be pre-configured with custom dimensions and also requires a `custom_map`. Note the form of  `gtag('set',{"section":"account","pagetype":"home","is_known_user":"1"}); gtag('config','UA-12345678987654321-12',{"custom_map":{"dimension1":"section","dimension2":"pagetype","dimension5":"is_known_user"}});` sets the `pagetype` label,however that is not transmitted to their server - it is only used locally for translation.
-
+4. AMP uses the `gat.js` concepts
 
 ## order of execution and automatic pageviews
 
@@ -100,6 +101,7 @@ The available modes are:
     AnalyticsMode.GA_JS - legacy `ga.js`
     AnalyticsMode.ANALYTICS - current/deprecated `analytics.js`
     AnalyticsMode.GTAG - current/future `gtag.js`
+    AnalyticsMode.AMP - amp plugin support, is a variant of `gtag.js`
 
 The default is currently `AnalyticsMode.ANALYTICS`, which has the smallest amount of network traffic.
 

@@ -1,4 +1,9 @@
+0.2.1
+	2018.10.08
+	* initial (limited) support for AMP format
+
 0.2.0
+
 	2018.07.26
 	* initial release
 

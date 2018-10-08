@@ -1215,6 +1215,151 @@ gtag('config', 'UA-123123-1', {'user_id': 'cecil'});
 gtag('config', 'UA-123123-3', {'user_id': 'cecil'});"""
 
 
+class TestAmp(CoreTests, unittest.TestCase):
+    """
+    python -munittest g_analytics_writer.tests.writing.TestAmp.test_track_event
+
+    python -munittest g_analytics_writer.tests.writing.TestAmp
+    python -munittest g_analytics_writer.tests.writing.TestAmp.test_advanced
+    python -munittest g_analytics_writer.tests.writing.TestAmp.test_crossdomain
+    """
+    mode = AnalyticsMode.AMP
+    data__transaction_dict_good = data__transaction_dict_2
+    data__transaction_dict_bad = data__transaction_dict_bad
+    data__transaction_item_dict = data__transaction_item_dict
+    data__transaction_item_dict_bad = data__transaction_item_dict_bad
+    data__custom_variables = data__custom_variables__ANALYTICS
+    data__event_good_1 = data__event_1
+    data__event_good_2 = data__event_2
+    data__event_good_3 = data__event_3
+    data__event_good_4 = data__event_4__ANALYTICS_hit
+    data__test_pageview__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_pageview_multi__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_multiple_accounts__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-2"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_comments__html_comments = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+
+    data__test_comments__html_nocomments = """\
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>"""
+    data__test_transaction_good__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+
+
+    data__test_crossdomain__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_crossdomain__html_multi = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_track_event__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_crossdomain__html_link_attrs = ''  # empty string
+    data__test_custom_variables__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+
+    # gtag_dimensions_strategy, global_custom_data, expected_html
+    data_gtag_dimensions_strategies = (
+        (GtagDimensionsStrategy.SET_CONFIG, True, """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->"""),
+        (GtagDimensionsStrategy.SET_CONFIG, False, """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->"""),
+        (GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT, True, """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->"""),
+        (GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT, False, """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->"""),
+    )
+    data__test_custom_variables__global__html = data__test_custom_variables__html
+    data__test_advanced__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_advanced__nonglobal__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_userid_prerender__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"extraUrlParams":{"user_id":"cecil"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_userid_prerender_multi__html = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"extraUrlParams":{"user_id":"cecil"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_userid_postrender__html = ""
+    data__test_userid_postrender_multi__html = ""
+
+
 class TestSetup(unittest.TestCase):
 
     def test_defaults(self):

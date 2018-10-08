@@ -7,7 +7,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-__VERSION__ = '0.2.0'
+__VERSION__ = '0.2.1'
 
 
 # ==============================================================================
@@ -51,11 +51,13 @@ class AnalyticsMode(object):
     ANALYTICS = 2
     # 3 is reserved for ANALYTICS that is not async
     GTAG = 4
+    AMP = 5
 
     _default = ANALYTICS
     _valid_modes = (GA_JS,
                     ANALYTICS,
                     GTAG,
+                    AMP,
                     )
     _supports_single_push = (GA_JS, )
 
@@ -1820,6 +1822,43 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             script.append('<!-- End Google Analytics -->')
         return u"""\n""".join(script)
 
+    def _render__amp(self):
+        script = ['<amp-analytics type="googleanalytics">',
+                  '<script type="application/json">',
+                  ]
+        payload = {'vars': {'account': self.data_struct['*account_id'],
+                            },
+                   'triggers': {'trackPageview': {'on': 'visible',
+                                                  'request': 'pageview',
+                                                  },
+                                },
+                    }
+
+        # these are optional
+        extra_url_params = {}
+        if self.data_struct['*user_id']:
+            extra_url_params['user_id'] = self.data_struct['*user_id']
+
+        if self.data_struct['*custom_dimensions']:
+            for _key, _dimension in self.data_struct['*custom_dimensions'].items():
+                # _dimension = ('name', 'value', True/False/None)
+                extra_url_params['cd%s' % _key] = _dimension[1]
+
+        # cleanup this 
+        if extra_url_params:
+            payload['extraUrlParams'] = extra_url_params
+        script.append(custom_dumps(payload))
+
+        script.extend(['</script>',
+                       '</amp-analytics>',
+                       ])
+        if self.use_comments:
+            script.insert(0, u"""<!-- Google Analytics -->""")
+            script.append('<!-- End Google Analytics -->')
+        return u"""\n""".join(script)
+        
+
+
     def render(self, mode=None):
         """
         helper function. prints out GA code for you, in the right order.
@@ -1841,9 +1880,22 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             return self._render__analytics(async=True)
         elif mode == AnalyticsMode.GTAG:
             return self._render__gtag()
-
+        elif mode == AnalyticsMode.AMP:
+            return self._render__amp()
         return '<!-- unsupported AnalyticsMode -->'
 
+
+
+    def render_head(self):
+        """
+        renders elements for the <head>
+        """
+        if (mode is not None) and (mode not in AnalyticsMode._valid_modes):
+            raise ValueError("invalid mode")
+        mode = mode if mode is not None else self.mode
+        if mode == AnalyticsMode.AMP:
+            return '<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>'
+        return ''  # no head
 
 # ==============================================================================
 

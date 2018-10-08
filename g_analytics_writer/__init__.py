@@ -263,6 +263,12 @@ class AnalyticsWriter(object):
     gtag_dimensions_strategy = GtagDimensionsStrategy.SET_CONFIG
     amp_clientid_integration = None
 
+    # for convenience, makes these classes available on the instances of ``AnalyticsWriter``
+    # this allows for usage like this:
+    # ``request.g_analytics_writer.render(mode=request.g_analytics_writer.AnalyticsMode.AMP)``
+    AnalyticsMode = AnalyticsMode
+    GtagDimensionsStrategy = GtagDimensionsStrategy
+
     def __init__(
         self,
         account_id,
@@ -1865,7 +1871,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
                 # _dimension = ('name', 'value', True/False/None)
                 extra_url_params['cd%s' % _key] = _dimension[1]
 
-        # cleanup this 
+        # cleanup this
         if extra_url_params:
             payload['extraUrlParams'] = extra_url_params
         script.append(custom_dumps(payload))
@@ -1877,8 +1883,6 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             script.insert(0, u"""<!-- Google Analytics -->""")
             script.append('<!-- End Google Analytics -->')
         return u"""\n""".join(script)
-        
-
 
     def render(self, mode=None):
         """

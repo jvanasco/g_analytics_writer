@@ -1,6 +1,7 @@
 0.2.1
 	2018.10.08
 	* initial (limited) support for AMP format
+	* added some classes as attibutes of `AnalyticsWriter`
 
 0.2.0
 

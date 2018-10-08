@@ -22,6 +22,7 @@ class _TestHarness(object):
     _gwriter_mode = g_analytics_writer.AnalyticsMode.GA_JS
     _gwriter_use_comments = None
     _gwriter_single_push = None
+    _gwriter_amp_clientid_integration = None
     _gwriter_gtag_dimensions_strategy = None
     _gwriter_global_custom_data = None
     _expected_setup_fail = None
@@ -41,6 +42,8 @@ class _TestHarness(object):
             settings['g_analytics_writer.global_custom_data'] = self._gwriter_global_custom_data
         if self._gwriter_gtag_dimensions_strategy is not None:
             settings['g_analytics_writer.gtag_dimensions_strategy'] = self._gwriter_gtag_dimensions_strategy
+        if self._gwriter_amp_clientid_integration is not None:
+            settings['g_analytics_writer.amp_clientid_integration'] = self._gwriter_amp_clientid_integration
 
         if self._expected_setup_fail:
             self.assertRaises(ValueError, self.config.include, 'g_analytics_writer.pyramid_integration')
@@ -101,6 +104,12 @@ class _TestSetup(_TestHarness):
         else:
             self.assertEqual(self.request.g_analytics_writer.gtag_dimensions_strategy, self._gwriter_gtag_dimensions_strategy)
 
+        # possible overrides
+        if self._gwriter_amp_clientid_integration is None:
+            self.assertEqual(self.request.g_analytics_writer.amp_clientid_integration, AnalyticsWriter.amp_clientid_integration)
+        else:
+            self.assertEqual(self.request.g_analytics_writer.amp_clientid_integration, self._gwriter_amp_clientid_integration)
+
 
 class TestSetupSimple(_TestSetup, unittest.TestCase):
     pass
@@ -137,6 +146,14 @@ class TestSetupGtagDimensionsStrategyConfignopageviewSetEvent(_TestSetup, unitte
 class TestSetupGtagDimensionsStrategyBad(_TestSetup, unittest.TestCase):
     _gwriter_gtag_dimensions_strategy = 100
     _expected_setup_fail = True
+
+
+class TestSetupAmpClientidIntegrationTrue(_TestSetup, unittest.TestCase):
+    _gwriter_amp_clientid_integration = True
+
+
+class TestSetupAmpClientidIntegrationFalse(_TestSetup, unittest.TestCase):
+    _gwriter_amp_clientid_integration = False
 
 
 class _TestPageviews(_TestHarness):

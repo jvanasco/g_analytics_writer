@@ -50,6 +50,15 @@ def includeme(config):
             raise ValueError("Invalid GtagDimensionsStrategy for AnalyticsWriter: g_analytics_writer.gtag_dimensions_strategy")
         kwargs['gtag_dimensions_strategy'] = gtag_dimensions_strategy
 
+    '''
+    :amp_clientid_integration 
+    integrates the client_id of amp and non-amp pages
+    see https://support.google.com/analytics/answer/7486764
+    '''
+    amp_clientid_integration = config_settings.get('g_analytics_writer.amp_clientid_integration')
+    if amp_clientid_integration is not None:
+        kwargs['amp_clientid_integration'] = asbool(amp_clientid_integration)
+
     log.debug("parsed setup for g_analytics_writer: %s" % kwargs)
 
     def _new_AnalyticsWriter(request):

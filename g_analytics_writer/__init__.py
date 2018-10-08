@@ -261,6 +261,7 @@ class AnalyticsWriter(object):
     force_ssl = None
     global_custom_data = True
     gtag_dimensions_strategy = GtagDimensionsStrategy.SET_CONFIG
+    amp_clientid_integration = None
 
     def __init__(
         self,
@@ -271,6 +272,7 @@ class AnalyticsWriter(object):
         force_ssl=None,
         global_custom_data=True,
         gtag_dimensions_strategy=GtagDimensionsStrategy.SET_CONFIG,
+        amp_clientid_integration = None,
     ):
         """
         Sets up self.data_struct dict which we use for storage.
@@ -317,12 +319,27 @@ class AnalyticsWriter(object):
                 default: True
                 If ``True``, will register the custom metrics/data for all page hits.
                 This is only supported on `analytics.js`; `gtag.js` does not seem to have an option
+            :amp_clientid_integration
+                BOOLEAN
+                default: None
+                If ``True``, will handle client_id integration for amp pages.
+                see https://support.google.com/analytics/answer/7486764
+                This requires two parts:
+                1. opt in on AMP pages, by adding to <HEAD>
+                    <meta name="amp-google-client-id-api" content="googleanalytics">
+                2. opt in on non-AMP pages, by adding to:
+                    analytics.js
+                        ga('create', 'UA-XXXXX-Y', 'auto', {'useAmpClientId': true});
+                    gtag.js
+                        gtag('config', 'UA-XXXXX-Y', {'use_amp_client_id': true});
+                3. set up referral exclusion on `cdn.ampproject.org` and subdomains if needed.
         """
         if mode not in AnalyticsMode._valid_modes:
             raise ValueError("invalid mode")
         self.mode = mode
         self.use_comments = use_comments
         self.single_push = single_push
+        self.amp_clientid_integration = amp_clientid_integration
 
         # `ga.js` allows a force of ssl
         # https://developers.google.com/analytics/devguides/collection/gajs/#ssl
@@ -1404,6 +1421,8 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
             create_args['allowLinker'] = True
         if self.data_struct['*user_id']:
             create_args['userId'] = self.data_struct['*user_id']
+        if self.amp_clientid_integration:
+            create_args['useAmpClientId'] = True
 
         (secondary_account_name,
          tracker_prefix
@@ -1658,6 +1677,8 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 
         # initial config args
         create_args = {}
+        if self.amp_clientid_integration:
+            create_args['use_amp_client_id'] = True
         if self.data_struct['*crossdomain_tracking']:
             create_args['linker'] = {}
             if self.data_struct['*crossdomain_tracking']['accept_incoming']:
@@ -1884,9 +1905,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             return self._render__amp()
         return '<!-- unsupported AnalyticsMode -->'
 
-
-
-    def render_head(self):
+    def render_head(self, mode=None):
         """
         renders elements for the <head>
         """
@@ -1894,7 +1913,9 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             raise ValueError("invalid mode")
         mode = mode if mode is not None else self.mode
         if mode == AnalyticsMode.AMP:
-            return '<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>'
+            if self.amp_clientid_integration:
+                return """<meta name="amp-google-client-id-api" content="googleanalytics">\n<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>"""
+            return """<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>"""
         return ''  # no head
 
 # ==============================================================================

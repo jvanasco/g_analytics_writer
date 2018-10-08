@@ -44,6 +44,7 @@ Every command has extensive docstrings, which also include, credit, and link to 
 * eCommerce
 * Event Tracking
 * Session Unification/userId (`analytics.js` only)
+* AMP client_id integration
 
 
 # what's the difference between all these tracking versions?
@@ -124,6 +125,7 @@ the `Pyramid` helpers simply manage a `AnalyticsWriter` object in the request.ga
         g_analytics_writer.force_ssl = <BOOLEAN>
         g_analytics_writer.global_custom_data = <BOOLEAN>
         g_analytics_writer.gtag_dimensions_strategy = <BOOLEAN>
+        g_analytics_writer.amp_clientid_integration = <BOOLEAN>
 
     this way you can have different reporting environments...
 

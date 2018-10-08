@@ -45,6 +45,8 @@ class CoreTests(object):
     data_gtag_dimensions_strategies = None
     data_global_custom_data = None
     data__test_force_ssl = None
+    data__test_amp_clientid_integration = None
+    data__test_amp_clientid_integration_head = None
 
     def test_pageview(self):
         writer = AnalyticsWriter('UA-123123-1', mode=self.mode)
@@ -306,7 +308,21 @@ class CoreTests(object):
         else:
             raise unittest.SkipTest("force_ssl not tested on %s" % self.__class__.__name__)
 
-
+    def test_amp_clientid_integration(self):
+        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, amp_clientid_integration=True)
+        as_html = writer.render()
+        if PRINT_RENDERS:
+            print(as_html)
+        self.assertEqual(as_html, self.data__test_amp_clientid_integration)
+        
+        for kwarg, expected_html in self.data__test_amp_clientid_integration_head.items():
+            writer = AnalyticsWriter('UA-123123-1', mode=self.mode, amp_clientid_integration=kwarg)
+            as_html = writer.render_head()
+            if PRINT_RENDERS:
+                print(as_html)
+            self.assertEqual(as_html, expected_html)
+    
+    
 # global dicts used for tests
 # this lets us compare the different formats
 data__transaction_dict_bad = {
@@ -666,6 +682,10 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 </script>
 <!-- End Google Analytics -->"""),
     )
+    data__test_amp_clientid_integration = data__test_pageview__html  # not sure this functionality is possible under ga.js
+    data__test_amp_clientid_integration_head = {True: '',
+                                                False: ''
+                                                }
 
 
 class TestAnalytics(CoreTests, unittest.TestCase):
@@ -956,6 +976,20 @@ ga('set','userId','cecil');
 ga('send','event','authentication','user-id available');
 ga('trkr0.set','userId','cecil');
 ga('trkr0.send','event','authentication','user-id available');"""
+    data__test_amp_clientid_integration = """\
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-123123-1','auto',{"useAmpClientId":true});
+ga('send','pageview');
+</script>
+<!-- End Google Analytics -->"""
+    data__test_amp_clientid_integration_head = {True: '',
+                                                False: ''
+                                                }
 
 
 class TestGtag(CoreTests, unittest.TestCase):
@@ -1213,6 +1247,20 @@ gtag('config', 'UA-123123-1', {'user_id': 'cecil'});"""
     data__test_userid_postrender_multi__html = """\
 gtag('config', 'UA-123123-1', {'user_id': 'cecil'});
 gtag('config', 'UA-123123-3', {'user_id': 'cecil'});"""
+    data__test_amp_clientid_integration = """\
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+gtag('config','UA-123123-1',{"use_amp_client_id":true});
+</script>
+<!-- End Google Analytics -->"""
+    data__test_amp_clientid_integration_head = {True: '',
+                                                False: ''
+                                                }
 
 
 class TestAmp(CoreTests, unittest.TestCase):
@@ -1358,6 +1406,17 @@ class TestAmp(CoreTests, unittest.TestCase):
 <!-- End Google Analytics -->"""
     data__test_userid_postrender__html = ""
     data__test_userid_postrender_multi__html = ""
+    data__test_amp_clientid_integration = """\
+<!-- Google Analytics -->
+<amp-analytics type="googleanalytics">
+<script type="application/json">
+{"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}
+</script>
+</amp-analytics>
+<!-- End Google Analytics -->"""
+    data__test_amp_clientid_integration_head = {True: '''<meta name="amp-google-client-id-api" content="googleanalytics">\n<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>''',
+                                                False: '''<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>''',
+                                                }
 
 
 class TestSetup(unittest.TestCase):

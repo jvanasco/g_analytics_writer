@@ -1,3 +1,7 @@
+0.3.0
+	2019.04.25
+	* official Python3 support. it worked before but just sort of.
+
 0.2.1
 	2018.10.08
 	* initial (limited) support for AMP format

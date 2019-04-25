@@ -315,7 +315,7 @@ class CoreTests(object):
             print(as_html)
         self.assertEqual(as_html, self.data__test_amp_clientid_integration)
         
-        for kwarg, expected_html in self.data__test_amp_clientid_integration_head.items():
+        for kwarg, expected_html in list(self.data__test_amp_clientid_integration_head.items()):
             writer = AnalyticsWriter('UA-123123-1', mode=self.mode, amp_clientid_integration=kwarg)
             as_html = writer.render_head()
             if PRINT_RENDERS:

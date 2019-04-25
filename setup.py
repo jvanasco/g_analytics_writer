@@ -25,6 +25,7 @@ with open(os.path.join(os.path.dirname(__file__),
         re.S).match(v_file.read()).group(1)
 
 requires = ["metadata_utils>=0.0.2",
+            "six",
             ]
 
 setup(
@@ -35,6 +36,7 @@ setup(
     classifiers=["Intended Audience :: Developers",
                  "Framework :: Pyramid",
                  "Programming Language :: Python",
+                 "Programming Language :: Python :: 3",
                  "License :: OSI Approved :: MIT License",
                  ],
     keywords="web pyramid google analytics",

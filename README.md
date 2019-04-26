@@ -1,5 +1,7 @@
 g_analytics_writer gives lightweight support for writing optimized "Google Analytics" tracking code for those times when you need to use The Great Satan, even though you would prefer not to.
 
+Python2.7 and Python3.5+ are supported
+
 It offers a `AnalyticsWriter` object, which provides a standard API to authoring multiple "Google Analytics" tracking formats:
 
 * `ga.js` (historical legacy)

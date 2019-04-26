@@ -1,9 +1,4 @@
-from json import dumps as json_dumps
-# import pdb
-
-
-import six
-from six import text_type
+from json import dumps as _json_dumps
 
 
 # logging
@@ -33,9 +28,17 @@ PREFIXLEN_dimension = len('dimension')
 PREFIXLEN_metric = len('metric')
 
 
-def custom_dumps(data):
-    # simply the dumping
-    return json_dumps(data, separators=(',', ':'))
+def json_dumps(data):
+    """
+    `json_dumps` is a callable used to encode dicts into JSON objects
+    BY DEFAULT this will encode to ASCII
+    if you expect UTF-8 data, you may want to override this and pass in a custom
+    function such as:
+
+        def my_custom_dumps(data):
+            return json.dumps(data, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+    """
+    return _json_dumps(data, separators=(',', ':'))
 
 
 def generate_tracker_name(secondary_account):
@@ -266,6 +269,7 @@ class AnalyticsWriter(object):
     global_custom_data = True
     gtag_dimensions_strategy = GtagDimensionsStrategy.SET_CONFIG
     amp_clientid_integration = None
+    _json_dumps = None
 
     # for convenience, makes these classes available on the instances of ``AnalyticsWriter``
     # this allows for usage like this:
@@ -282,7 +286,8 @@ class AnalyticsWriter(object):
         force_ssl=None,
         global_custom_data=True,
         gtag_dimensions_strategy=GtagDimensionsStrategy.SET_CONFIG,
-        amp_clientid_integration = None,
+        amp_clientid_integration=None,
+        json_dumps_callable=json_dumps,
     ):
         """
         Sets up self.data_struct dict which we use for storage.
@@ -343,6 +348,12 @@ class AnalyticsWriter(object):
                     gtag.js
                         gtag('config', 'UA-XXXXX-Y', {'use_amp_client_id': true});
                 3. set up referral exclusion on `cdn.ampproject.org` and subdomains if needed.
+            :json_dumps_callable
+                CALLABLE
+                default: ``g_analytics_writer.json_dumps```
+                This callable is used to dump dicts into json.  It may need to
+                be overridden to support your preferred encoding. See the
+                `json_dumps` function for detailed documentation.
         """
         if mode not in AnalyticsMode._valid_modes:
             raise ValueError("invalid mode")
@@ -350,6 +361,7 @@ class AnalyticsWriter(object):
         self.use_comments = use_comments
         self.single_push = single_push
         self.amp_clientid_integration = amp_clientid_integration
+        self._json_dumps = json_dumps_callable
 
         # `ga.js` allows a force of ssl
         # https://developers.google.com/analytics/devguides/collection/gajs/#ssl
@@ -1107,9 +1119,9 @@ class AnalyticsWriter(object):
                 # `ga.js` allows a force of ssl
                 # https://developers.google.com/analytics/devguides/collection/gajs/#ssl
                 if _single_push:
-                    nested_script.append("""['_gat._forceSSL']""")
+                    nested_script.append(u"""['_gat._forceSSL']""")
                 else:
-                    script.append("""_gaq.push(['_gat._forceSSL']);""")
+                    script.append(u"""_gaq.push(['_gat._forceSSL']);""")
 
         (secondary_account_name,
          tracker_prefix
@@ -1117,9 +1129,9 @@ class AnalyticsWriter(object):
 
         # _setAccount
         if _single_push:
-            nested_script.append("""['%s_setAccount','%s']""" % (tracker_prefix, account_id))
+            nested_script.append(u"""['%s_setAccount','%s']""" % (tracker_prefix, account_id))
         else:
-            script.append("""_gaq.push(['%s_setAccount','%s']);""" % (tracker_prefix, account_id))
+            script.append(u"""_gaq.push(['%s_setAccount','%s']);""" % (tracker_prefix, account_id))
 
         # crossdomain_tracking
         """
@@ -1189,11 +1201,11 @@ class AnalyticsWriter(object):
         if self.data_struct['*crossdomain_tracking']:
             # this operates on the FIRST domain
             if _single_push:
-                nested_script.append("""['%s_setDomainName','%s']""" % (tracker_prefix, self.data_struct['*crossdomain_tracking']['domains'][0]))
-                nested_script.append("""['%s_setAllowLinker',true]""" % (tracker_prefix))
+                nested_script.append(u"""['%s_setDomainName','%s']""" % (tracker_prefix, self.data_struct['*crossdomain_tracking']['domains'][0]))
+                nested_script.append(u"""['%s_setAllowLinker',true]""" % (tracker_prefix))
             else:
-                script.append("""_gaq.push(['%s_setDomainName','%s']);""" % (tracker_prefix, self.data_struct['*crossdomain_tracking']['domains'][0]))
-                script.append("""_gaq.push(['%s_setAllowLinker',true]);""" % tracker_prefix)
+                script.append(u"""_gaq.push(['%s_setDomainName','%s']);""" % (tracker_prefix, self.data_struct['*crossdomain_tracking']['domains'][0]))
+                script.append(u"""_gaq.push(['%s_setAllowLinker',true]);""" % tracker_prefix)
 
         # _setCustomVar is next
         for index in sorted(self.data_struct['*custom_dimensions'].keys()):
@@ -1205,18 +1217,18 @@ class AnalyticsWriter(object):
                 continue
             _payload = (tracker_prefix, index, _payload[0], _payload[1], _payload[2], )
             if _payload[4]:
-                formatted = """['%s_setCustomVar',%s,'%s','%s',%s]""" % _payload
+                formatted = u"""['%s_setCustomVar',%s,'%s','%s',%s]""" % _payload
             else:
-                formatted = """['%s_setCustomVar',%s,'%s','%s']""" % _payload[:4]
+                formatted = u"""['%s_setCustomVar',%s,'%s','%s']""" % _payload[:4]
             if _single_push:
                 nested_script.append(formatted)
             else:
-                script.append("""_gaq.push(%s);""" % formatted)
+                script.append(u"""_gaq.push(%s);""" % formatted)
 
         if _single_push:
-            nested_script.append("""['%s_trackPageview']""" % tracker_prefix)
+            nested_script.append(u"""['%s_trackPageview']""" % tracker_prefix)
         else:
-            script.append("""_gaq.push(['%s_trackPageview']);""" % tracker_prefix)
+            script.append(u"""_gaq.push(['%s_trackPageview']);""" % tracker_prefix)
 
         # according to GA docs, the order to submit via javascript is:
         # # _trackPageview
@@ -1250,7 +1262,7 @@ class AnalyticsWriter(object):
                     if _single_push:
                         nested_script.append(_formatted)
                     else:
-                        script.append("""_gaq.push(%s);""" % _formatted)
+                        script.append(u"""_gaq.push(%s);""" % _formatted)
                     continue
                 _transaction_args = source_dict_to_ordered_args(_transaction_dict, _txn_fields_order, remove_undefined=True)
                 _formatted = """['%(tracker_prefix)s_addTrans',%(joined_args)s]""" % {'tracker_prefix': tracker_prefix,
@@ -1259,7 +1271,7 @@ class AnalyticsWriter(object):
                 if _single_push:
                     nested_script.append(_formatted)
                 else:
-                    script.append("""_gaq.push(%s);""" % _formatted)
+                    script.append(u"""_gaq.push(%s);""" % _formatted)
 
                 # enough to `send` !
                 _valid_transactions = True
@@ -1276,7 +1288,7 @@ class AnalyticsWriter(object):
                             if _single_push:
                                 nested_script.append(_formatted)
                             else:
-                                script.append("""_gaq.push(%s);""" % _formatted)
+                                script.append(u"""_gaq.push(%s);""" % _formatted)
                             continue
 
                         _item_args = source_dict_to_ordered_args(_item_dict, _item_fields_order, remove_undefined=True)
@@ -1286,16 +1298,16 @@ class AnalyticsWriter(object):
                         if _single_push:
                             nested_script.append(_formatted)
                         else:
-                            script.append("""_gaq.push(%s);""" % _formatted)
+                            script.append(u"""_gaq.push(%s);""" % _formatted)
 
             if _valid_transactions:
                 # send the _trackTransaction
                 # https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiEcommerce?csw=1#_gat.GA_Tracker_._addTrans
                 # Sends both the transaction and item data to the Google Analytics server. This method should be called after _trackPageview(), and used in conjunction with the _addItem() and addTrans() methods. It should be called after items and transaction elements have been set up.
                 if _single_push:
-                    nested_script.append("""['%s_trackTrans']""" % tracker_prefix)
+                    nested_script.append(u"""['%s_trackTrans']""" % tracker_prefix)
                 else:
-                    script.append("""_gaq.push(['%s_trackTrans']);""" % tracker_prefix)
+                    script.append(u"""_gaq.push(['%s_trackTrans']);""" % tracker_prefix)
 
         else:
             if self.data_struct['*transaction_items']:
@@ -1367,7 +1379,7 @@ class AnalyticsWriter(object):
                     if _event is INVALID_TAG:
                         script.append("/* _trackEvent: incompatible event */")
                     else:
-                        script.append("""_gaq.push(%s);""" % _event)
+                        script.append(u"""_gaq.push(%s);""" % _event)
         # end events
 
         # done
@@ -1377,15 +1389,15 @@ class AnalyticsWriter(object):
         script = []
         nested_script = []
         if self.use_comments:
-            script.append("""<!-- Google Analytics -->""")
-        script.append("""<script type="text/javascript">""")
-        script.append("""var _gaq = _gaq || [];""")
+            script.append(u"""<!-- Google Analytics -->""")
+        script.append(u"""<script type="text/javascript">""")
+        script.append(u"""var _gaq = _gaq || [];""")
 
         _single_push = self.single_push
 
         # start the single push if we elected
         if _single_push:
-            script.append("""_gaq.push(""")
+            script.append(u"""_gaq.push(""")
 
         (script,
          nested_script,
@@ -1405,19 +1417,19 @@ class AnalyticsWriter(object):
 
         # close the single push if we elected
         if _single_push:
-            script.append(""",\n""".join(nested_script))
-            script.append(""");""")
+            script.append(u""",\n""".join(nested_script))
+            script.append(u""");""")
 
-        script.append("""\
+        script.append(u"""\
 (function() {
 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
 ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
 var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
 })();""")
-        script.append("""</script>""")
+        script.append(u"""</script>""")
         if self.use_comments:
             script.append('<!-- End Google Analytics -->')
-        return """\n""".join(script)
+        return u"""\n""".join(script)
 
     def _render__analytics__inner(
         self,
@@ -1442,26 +1454,26 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         # create([trackingId], [cookieDomain], [name], [fieldsObject]);
         if not create_args:
             if secondary_account_name:
-                script.append("""ga('create','%s','auto','%s');""" % (account_id, secondary_account_name))
+                script.append(u"""ga('create','%s','auto','%s');""" % (account_id, secondary_account_name))
             else:
-                script.append("""ga('create','%s','auto');""" % account_id)
+                script.append(u"""ga('create','%s','auto');""" % account_id)
         else:
-            create_args = custom_dumps(create_args)
+            create_args = self._json_dumps(create_args)
             if secondary_account_name:
-                script.append("""ga('create','%s','auto','%s',%s);""" % (account_id, secondary_account_name, create_args))
+                script.append(u"""ga('create','%s','auto','%s',%s);""" % (account_id, secondary_account_name, create_args))
             else:
-                script.append("""ga('create','%s','auto',%s);""" % (account_id, create_args))
+                script.append(u"""ga('create','%s','auto',%s);""" % (account_id, create_args))
 
         if secondary_account is False:
             # crossdomain
             if self.data_struct['*crossdomain_tracking']:
-                script.append("""ga('require','linker');""")
+                script.append(u"""ga('require','linker');""")
                 destination_domains = self.data_struct['*crossdomain_tracking']['domains']
                 destination_domains = ','.join(["'%s'" % d for d in destination_domains])
-                script.append("""ga('linker:autoLink',[%s]);""" % destination_domains)
+                script.append(u"""ga('linker:autoLink',[%s]);""" % destination_domains)
             # ecommerce
             if self.data_struct['*transaction']:
-                script.append("""ga('require','ecommerce');""")
+                script.append(u"""ga('require','ecommerce');""")
 
         pagehit_data = {}
         custom_data = {}
@@ -1491,7 +1503,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         if self.global_custom_data:
             # update the entire tracker
             if custom_data:
-                script.append("""ga('%sset',%s);""" % (tracker_prefix, custom_dumps(custom_data)))
+                script.append(u"""ga('%sset',%s);""" % (tracker_prefix, self._json_dumps(custom_data)))
         else:
             # update our pagedata items
             # pagehit_data.update(custom_data)
@@ -1500,10 +1512,10 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         # pageview
         # ga('send', 'pageview');
         if pagehit_data:
-            formatted_line = """ga('%ssend','pageview',%s);""" % (tracker_prefix, custom_dumps(pagehit_data))
+            formatted_line = u"""ga('%ssend','pageview',%s);""" % (tracker_prefix, self._json_dumps(pagehit_data))
             script.append(formatted_line)
         else:
-            script.append("""ga('%ssend','pageview');""" % tracker_prefix)
+            script.append(u"""ga('%ssend','pageview');""" % tracker_prefix)
 
         # according to GA docs, the order to submit via javascript is:
         # # ga('send', 'pageview');
@@ -1534,7 +1546,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
                     continue
 
                 _transaction_clean = source_dict_to_api_dict(_transaction_dict, '*transaction', AnalyticsMode.ANALYTICS)
-                _formatted = """ga('%secommerce:addTransaction',%s)""" % (tracker_prefix, custom_dumps(_transaction_clean))
+                _formatted = u"""ga('%secommerce:addTransaction',%s)""" % (tracker_prefix, self._json_dumps(_transaction_clean))
                 script.append(_formatted)
 
                 # enough to `send` !
@@ -1552,11 +1564,11 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
                             script.append(_formatted)
                             continue
                         _item_clean = source_dict_to_api_dict(_item_dict, '*transaction_item', AnalyticsMode.ANALYTICS)
-                        _formatted = """ga('%secommerce:addItem',%s)""" % (tracker_prefix, custom_dumps(_item_clean))
+                        _formatted = u"""ga('%secommerce:addItem',%s)""" % (tracker_prefix, self._json_dumps(_item_clean))
                         script.append(_formatted)
 
             if _valid_transactions:
-                script.append("""ga('%secommerce:send');""" % tracker_prefix)
+                script.append(u"""ga('%secommerce:send');""" % tracker_prefix)
 
         else:
             if self.data_struct['*transaction_items']:
@@ -1628,8 +1640,8 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 
             _event_args_all = _event_args + _event_args_optional
             if _event_fieldobject:
-                _event_args_all.append(custom_dumps(_event_fieldobject))
-            _events.append("""ga('%ssend','event',%s);""" % (tracker_prefix, ','.join(_event_args_all)))
+                _event_args_all.append(self._json_dumps(_event_fieldobject))
+            _events.append(u"""ga('%ssend','event',%s);""" % (tracker_prefix, ','.join(_event_args_all)))
 
         if _events:
             for _event in _events:
@@ -1643,9 +1655,9 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
     def _render__analytics(self, async=None):
         script = []
         if self.use_comments:
-            script.append("""<!-- Google Analytics -->""")
-        script.append("""<script type="text/javascript">""")
-        script.append("""\
+            script.append(u"""<!-- Google Analytics -->""")
+        script.append(u"""<script type="text/javascript">""")
+        script.append(u"""\
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
 (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
 m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -1663,10 +1675,10 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
                                                     secondary_account=idx,
                                                     )
 
-        script.append("""</script>""")
+        script.append(u"""</script>""")
         if self.use_comments:
             script.append('<!-- End Google Analytics -->')
-        return """\n""".join(script)
+        return u"""\n""".join(script)
 
     def _render__gtag(self):
         """
@@ -1675,9 +1687,9 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         script = []
         account_id = self.data_struct['*account_id']
         if self.use_comments:
-            # script.append("""<!-- Google Analytics -->""")
-            script.append("""<!-- Global site tag (gtag.js) - Google Analytics -->""")
-        script.append("""\
+            # script.append(u"""<!-- Google Analytics -->""")
+            script.append(u"""<!-- Global site tag (gtag.js) - Google Analytics -->""")
+        script.append(u"""\
 <script async src="https://www.googletagmanager.com/gtag/js?id=%(account_id)s"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1708,7 +1720,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
                 custom_map['dimension%s' % index] = _payload[0]
                 custom_values[_payload[0]] = _payload[1]
             create_args['custom_map'] = custom_map
-            jsons_custom_values = custom_dumps(custom_values)
+            jsons_custom_values = self._json_dumps(custom_values)
 
         if jsons_custom_values:
             # if we have custom_variables, set before config
@@ -1724,7 +1736,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             for (idx, alt_account_id) in enumerate(self.data_struct['*additional_accounts']):
                 script.append("""gtag('config','%s');""" % alt_account_id)  # ,{'groups':'core'}
         else:
-            jsons_create_args = custom_dumps(create_args)
+            jsons_create_args = self._json_dumps(create_args)
             script.append("""gtag('config','%s',%s);""" % (account_id, jsons_create_args))
             for (idx, alt_account_id) in enumerate(self.data_struct['*additional_accounts']):
                 script.append("""gtag('config','%s',%s);""" % (alt_account_id, jsons_create_args))  # ,{'groups':'core'}
@@ -1793,7 +1805,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 
                 _transaction_clean['items'] = items
 
-                _formatted = """gtag('event', 'purchase', %s""" % custom_dumps(_transaction_clean)
+                _formatted = u"""gtag('event', 'purchase', %s""" % self._json_dumps(_transaction_clean)
                 script.append(_formatted)
 
             if _valid_transactions:
@@ -1835,10 +1847,10 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
                     _event_fieldobject[_field_dest] = _value
 
             if _event_fieldobject:
-                _formatted = """gtag('event','%s',%s""" % (_event_action, custom_dumps(_event_fieldobject))
+                _formatted = u"""gtag('event','%s',%s""" % (_event_action, self._json_dumps(_event_fieldobject))
                 _events.append(_formatted)
             else:
-                _formatted = """gtag('event','%s');""" % _event_action
+                _formatted = u"""gtag('event','%s');""" % _event_action
                 _events.append(_formatted)
 
         if _events:
@@ -1848,10 +1860,10 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
                 else:
                     script.append(_event)
 
-        script.append("""</script>""")
+        script.append(u"""</script>""")
         if self.use_comments:
             script.append('<!-- End Google Analytics -->')
-        return """\n""".join(script)
+        return u"""\n""".join(script)
 
     def _render__amp(self):
         script = ['<amp-analytics type="googleanalytics">',
@@ -1878,15 +1890,15 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         # cleanup this
         if extra_url_params:
             payload['extraUrlParams'] = extra_url_params
-        script.append(custom_dumps(payload))
+        script.append(self._json_dumps(payload))
 
         script.extend(['</script>',
                        '</amp-analytics>',
                        ])
         if self.use_comments:
-            script.insert(0, """<!-- Google Analytics -->""")
+            script.insert(0, u"""<!-- Google Analytics -->""")
             script.append('<!-- End Google Analytics -->')
-        return """\n""".join(script)
+        return u"""\n""".join(script)
 
     def render(self, mode=None):
         """

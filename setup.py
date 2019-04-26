@@ -24,7 +24,7 @@ with open(os.path.join(os.path.dirname(__file__),
         r".*__VERSION__ = '(.*?)'",
         re.S).match(v_file.read()).group(1)
 
-requires = ["metadata_utils>=0.0.2",
+requires = ["metadata_utils>=0.1.0",
             "six",
             ]
 

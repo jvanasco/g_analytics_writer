@@ -1,6 +1,9 @@
 0.3.0
 	2019.04.25
-	* official Python3 support. it worked before but just sort of.
+	* official Python3 support. it worked before, but was not officially supported.
+	* renamed `custom_json_dumps` to `json_dumps`
+	* added `json_dumps_callable` to `AnalyticsWriter.__init__`
+	* removed monkeypatching of json dumper in test, specify into writer
 
 0.2.1
 	2018.10.08

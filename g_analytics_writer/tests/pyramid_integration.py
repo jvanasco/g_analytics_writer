@@ -14,6 +14,7 @@ from pyramid.interfaces import IRequestExtensions
 
 # testing needs
 from webob.multidict import MultiDict
+from ._utils import custom_json_dumps_sorted
 
 
 class _TestHarness(object):
@@ -34,6 +35,7 @@ class _TestHarness(object):
         settings = self.config.get_settings()
         settings['g_analytics_writer.account_id'] = self._gwriter_accountid
         settings['g_analytics_writer.mode'] = self._gwriter_mode
+        settings['g_analytics_writer.json_dumps_callable'] = custom_json_dumps_sorted  # needed for testing because it sorts
         if self._gwriter_use_comments is not None:
             settings['g_analytics_writer.use_comments'] = self._gwriter_use_comments
         if self._gwriter_single_push is not None:

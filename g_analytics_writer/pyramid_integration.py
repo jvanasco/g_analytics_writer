@@ -20,6 +20,8 @@ def includeme(config):
     config_settings = config.get_settings()
     account_id = config_settings.get('g_analytics_writer.account_id')
     mode = int(config_settings.get('g_analytics_writer.mode', 0))
+    
+    # stuff them all in here
     kwargs = {}
     if mode not in AnalyticsMode._valid_modes:
         raise ValueError("Invalid AnalyticsMode for AnalyticsWriter: g_analytics_writer.mode")
@@ -58,6 +60,13 @@ def includeme(config):
     amp_clientid_integration = config_settings.get('g_analytics_writer.amp_clientid_integration')
     if amp_clientid_integration is not None:
         kwargs['amp_clientid_integration'] = asbool(amp_clientid_integration)
+
+    json_dumps_callable = config_settings.get('g_analytics_writer.json_dumps_callable')
+    if json_dumps_callable:
+        # if this isn't a callable function, then use pyramid's DottedNameResolver
+        if not callable(json_dumps_callable):
+            json_dumps_callable = config.name_resolver.resolve(json_dumps_callable)
+        kwargs['json_dumps_callable'] = json_dumps_callable
 
     log.debug("parsed setup for g_analytics_writer: %s" % kwargs)
 

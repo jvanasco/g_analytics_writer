@@ -23,7 +23,7 @@ from g_analytics_writer import GtagDimensionsStrategy
 import unittest
 import re
 import os
-from json import dumps as json_dumps
+from ._utils import custom_json_dumps_sorted
 
 # regexes to test against
 re_refresh_15 = re.compile('<meta http-equiv="refresh" content="15"/>')
@@ -36,14 +36,6 @@ PRINT_RENDERS = bool(int(os.environ.get('g_analytics_writer_debug', 0)))
 
 # pyramid testing requirements
 # from pyramid import testing
-
-
-# we need to pass this in...
-# production doesn't care about sorted keys
-# py2 and p3 generate different sorts though
-def custom_json_dumps_sorted(data):
-    # simply the dumping
-    return json_dumps(data, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
 
 
 class CoreTests(object):
@@ -324,7 +316,7 @@ class CoreTests(object):
             print(as_html)
         self.assertEqual(as_html, self.data__test_amp_clientid_integration)
         
-        for kwarg, expected_html in list(self.data__test_amp_clientid_integration_head.items()):
+        for kwarg, expected_html in self.data__test_amp_clientid_integration_head.items():
             writer = AnalyticsWriter('UA-123123-1', mode=self.mode, amp_clientid_integration=kwarg, json_dumps_callable=custom_json_dumps_sorted)
             as_html = writer.render_head()
             if PRINT_RENDERS:

@@ -6,7 +6,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-__VERSION__ = '0.3.0'
+__VERSION__ = '0.3.1'
 
 
 # ==============================================================================
@@ -209,7 +209,7 @@ field_requirements = {
 
 def source_dict_to_api_dict(source_dict, api_concept, api_mode):
     output = {}
-    for local_key, value in list(source_dict.items()):
+    for local_key, value in source_dict.items():
         try:
             api_key = translation_matrix[api_concept][local_key][api_mode]
             if api_key is not None:
@@ -1250,7 +1250,7 @@ class AnalyticsWriter(object):
 
             # used to decide if we `send`
             _valid_transactions = False
-            for transaction_id in list(self.data_struct['*transaction'].keys()):
+            for transaction_id in self.data_struct['*transaction'].keys():
                 _transaction_dict = self.data_struct['*transaction'][transaction_id]
                 try:
                     for _field in _txn_fields_required:
@@ -1533,7 +1533,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 
             # used to decide if we `send`
             _valid_transactions = False
-            for transaction_id in list(self.data_struct['*transaction'].keys()):
+            for transaction_id in self.data_struct['*transaction'].keys():
                 _transaction_dict = self.data_struct['*transaction'][transaction_id]
                 try:
                     for _field in _txn_fields_required:
@@ -1770,7 +1770,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             # consolidated error logging
             _errors = []
 
-            for transaction_id in list(self.data_struct['*transaction'].keys()):
+            for transaction_id in self.data_struct['*transaction'].keys():
                 _transaction_dict = self.data_struct['*transaction'][transaction_id]
                 try:
                     for _field in _txn_fields_required:
@@ -1883,7 +1883,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             extra_url_params['user_id'] = self.data_struct['*user_id']
 
         if self.data_struct['*custom_dimensions']:
-            for _key, _dimension in list(self.data_struct['*custom_dimensions'].items()):
+            for _key, _dimension in self.data_struct['*custom_dimensions'].items():
                 # _dimension = ('name', 'value', True/False/None)
                 extra_url_params['cd%s' % _key] = _dimension[1]
 

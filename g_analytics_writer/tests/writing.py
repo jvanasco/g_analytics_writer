@@ -17,6 +17,7 @@ import g_analytics_writer
 from g_analytics_writer import AnalyticsWriter
 from g_analytics_writer import AnalyticsMode
 from g_analytics_writer import GtagDimensionsStrategy
+
 # import g_analytics_writer.pyramid_integration
 
 # core testing facility
@@ -32,7 +33,7 @@ re_other_charset = re.compile('<meta charset="utf8"/>')
 # used for writing tests
 # export g_analytics_writer_debug=1
 # export g_analytics_writer_debug=0
-PRINT_RENDERS = bool(int(os.environ.get('g_analytics_writer_debug', 0)))
+PRINT_RENDERS = bool(int(os.environ.get("g_analytics_writer_debug", 0)))
 
 # pyramid testing requirements
 # from pyramid import testing
@@ -50,13 +51,15 @@ class CoreTests(object):
     data__test_amp_clientid_integration_head = None
 
     def test_pageview(self):
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_pageview__html)
 
-        writer.set_account_additional__add('UA-123123-3')
+        writer.set_account_additional__add("UA-123123-3")
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
@@ -68,11 +71,13 @@ class CoreTests(object):
             * switching accounts works
             * usig multiple accounts works
         """
-        a = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
+        a = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
         # switch account
-        a.set_account('UA-123123-2')
+        a.set_account("UA-123123-2")
         # add account
-        a.set_account_additional__add('UA-123123-3')
+        a.set_account_additional__add("UA-123123-3")
         html_rendered = a.render()
         if PRINT_RENDERS:
             print(html_rendered)
@@ -82,13 +87,23 @@ class CoreTests(object):
         """
         just tests to see the framing comments toggle works
         """
-        comments = AnalyticsWriter('UA-123123-1', mode=self.mode, use_comments=True, json_dumps_callable=custom_json_dumps_sorted)
+        comments = AnalyticsWriter(
+            "UA-123123-1",
+            mode=self.mode,
+            use_comments=True,
+            json_dumps_callable=custom_json_dumps_sorted,
+        )
         html_comments = comments.render()
         if PRINT_RENDERS:
             print(html_comments)
         self.assertEqual(html_comments, self.data__test_comments__html_comments)
 
-        nocomments = AnalyticsWriter('UA-123123-1', mode=self.mode, use_comments=False, json_dumps_callable=custom_json_dumps_sorted)
+        nocomments = AnalyticsWriter(
+            "UA-123123-1",
+            mode=self.mode,
+            use_comments=False,
+            json_dumps_callable=custom_json_dumps_sorted,
+        )
         html_nocomments = nocomments.render()
         if PRINT_RENDERS:
             print(html_nocomments)
@@ -98,7 +113,9 @@ class CoreTests(object):
         """
         just tests to see the framing comments toggle works
         """
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
         writer.add_transaction(self.data__transaction_dict_good)
         writer.add_transaction_item(self.data__transaction_item_dict)
         as_html = writer.render()
@@ -110,24 +127,41 @@ class CoreTests(object):
         """
         just tests to see the framing comments toggle works
         """
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
-        self.assertRaises(ValueError, writer.add_transaction, self.data__transaction_dict_bad)
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
+        self.assertRaises(
+            ValueError, writer.add_transaction, self.data__transaction_dict_bad
+        )
 
     def test_transaction_item_bad(self):
         """
         just tests to see the framing comments toggle works
         """
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
         writer.add_transaction(self.data__transaction_dict_good)
-        self.assertRaises(ValueError, writer.add_transaction_item, self.data__transaction_item_dict_bad)
+        self.assertRaises(
+            ValueError,
+            writer.add_transaction_item,
+            self.data__transaction_item_dict_bad,
+        )
 
     def test_transaction_good_single_push(self):
         """
         just tests to see the framing comments toggle works
         """
         if not self._test_single_push:
-            raise unittest.SkipTest("single_push not tested on %s" % self.__class__.__name__)
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, single_push=True, json_dumps_callable=custom_json_dumps_sorted)
+            raise unittest.SkipTest(
+                "single_push not tested on %s" % self.__class__.__name__
+            )
+        writer = AnalyticsWriter(
+            "UA-123123-1",
+            mode=self.mode,
+            single_push=True,
+            json_dumps_callable=custom_json_dumps_sorted,
+        )
         writer.add_transaction(self.data__transaction_dict_good)
         writer.add_transaction_item(self.data__transaction_item_dict)
         as_html = writer.render()
@@ -139,7 +173,9 @@ class CoreTests(object):
         """
         just tests to see the framing comments toggle works
         """
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
         writer.track_event(self.data__event_good_3)
@@ -153,27 +189,35 @@ class CoreTests(object):
         """
         just tests to see the framing comments toggle works
         """
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
-        writer.set_crossdomain_tracking('foo.example.com')
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
+        writer.set_crossdomain_tracking("foo.example.com")
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_crossdomain__html)
 
-        link_attrs = writer.render_crossdomain_link_attrs("https://example.com/foo.html")
+        link_attrs = writer.render_crossdomain_link_attrs(
+            "https://example.com/foo.html"
+        )
         if PRINT_RENDERS:
             print(link_attrs)
         self.assertEqual(link_attrs, self.data__test_crossdomain__html_link_attrs)
 
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
-        writer.set_crossdomain_tracking(domains=['foo.example.com', 'bar.example.com'])
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
+        writer.set_crossdomain_tracking(domains=["foo.example.com", "bar.example.com"])
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_crossdomain__html_multi)
 
     def test_custom_variables(self):
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
         (index, name, value, opt_scope) = self.data__custom_variables
         writer.set_custom_variable(index, name, value, opt_scope=opt_scope)
         as_html = writer.render()
@@ -185,7 +229,11 @@ class CoreTests(object):
             # cache for reset
             _existing__gtag_dimensions_strategy = writer.gtag_dimensions_strategy
             _existing__global_custom_data = writer.global_custom_data
-            for (gtag_dimensions_strategy, global_custom_data, expected_html) in self.data_gtag_dimensions_strategies:
+            for (
+                gtag_dimensions_strategy,
+                global_custom_data,
+                expected_html,
+            ) in self.data_gtag_dimensions_strategies:
                 writer.gtag_dimensions_strategy = gtag_dimensions_strategy
                 writer.global_custom_data = global_custom_data
                 as_html = writer.render()
@@ -215,17 +263,19 @@ class CoreTests(object):
         self.assertEqual(as_html_global, self.data__test_custom_variables__global__html)
 
     def test_advanced(self):
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
 
         # make sure this is True by default
         self.assertTrue(writer.global_custom_data)
 
         (index, name, value, opt_scope) = self.data__custom_variables
         # crossdomain
-        writer.set_crossdomain_tracking('foo.example.com')
+        writer.set_crossdomain_tracking("foo.example.com")
         # add account
-        writer.set_account_additional__add('UA-123123-2')
-        writer.set_account_additional__add('UA-123123-3')
+        writer.set_account_additional__add("UA-123123-2")
+        writer.set_account_additional__add("UA-123123-3")
         writer.set_custom_variable(index, name, value, opt_scope=opt_scope)
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
@@ -249,14 +299,21 @@ class CoreTests(object):
 
     def test_advanced_single_push(self):
         if not self._test_single_push:
-            raise unittest.SkipTest("single_push not tested on %s" % self.__class__.__name__)
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, single_push=True, json_dumps_callable=custom_json_dumps_sorted)
+            raise unittest.SkipTest(
+                "single_push not tested on %s" % self.__class__.__name__
+            )
+        writer = AnalyticsWriter(
+            "UA-123123-1",
+            mode=self.mode,
+            single_push=True,
+            json_dumps_callable=custom_json_dumps_sorted,
+        )
         (index, name, value, opt_scope) = self.data__custom_variables
         # crossdomain
-        writer.set_crossdomain_tracking('foo.example.com')
+        writer.set_crossdomain_tracking("foo.example.com")
         # add account
-        writer.set_account_additional__add('UA-123123-2')
-        writer.set_account_additional__add('UA-123123-3')
+        writer.set_account_additional__add("UA-123123-2")
+        writer.set_account_additional__add("UA-123123-3")
         writer.set_custom_variable(index, name, value, opt_scope=opt_scope)
         writer.track_event(self.data__event_good_1)
         writer.track_event(self.data__event_good_2)
@@ -270,30 +327,34 @@ class CoreTests(object):
         self.assertEqual(as_html, self.data__test_advanced_single_push__html)
 
     def test_userid_prerender(self):
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
-        writer.set_user_id('cecil')
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
+        writer.set_user_id("cecil")
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_userid_prerender__html)
 
         # multiple accounts
-        writer.set_account_additional__add('UA-123123-3')
+        writer.set_account_additional__add("UA-123123-3")
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_userid_prerender_multi__html)
 
     def test_userid_postrender(self):
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, json_dumps_callable=custom_json_dumps_sorted)
-        as_html = writer.setrender_user_id('cecil')
+        writer = AnalyticsWriter(
+            "UA-123123-1", mode=self.mode, json_dumps_callable=custom_json_dumps_sorted
+        )
+        as_html = writer.setrender_user_id("cecil")
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_userid_postrender__html)
 
         # multiple accounts
-        writer.set_account_additional__add('UA-123123-3')
-        as_html = writer.setrender_user_id('cecil')
+        writer.set_account_additional__add("UA-123123-3")
+        as_html = writer.setrender_user_id("cecil")
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_userid_postrender_multi__html)
@@ -301,92 +362,122 @@ class CoreTests(object):
     def test_force_ssl(self):
         if self.data__test_force_ssl:
             for (force_ssl, expected_html) in self.data__test_force_ssl:
-                writer = AnalyticsWriter('UA-123123-1', mode=self.mode, force_ssl=force_ssl, json_dumps_callable=custom_json_dumps_sorted)
+                writer = AnalyticsWriter(
+                    "UA-123123-1",
+                    mode=self.mode,
+                    force_ssl=force_ssl,
+                    json_dumps_callable=custom_json_dumps_sorted,
+                )
                 as_html = writer.render()
                 if PRINT_RENDERS:
                     print(as_html)
                 self.assertEqual(as_html, expected_html)
         else:
-            raise unittest.SkipTest("force_ssl not tested on %s" % self.__class__.__name__)
+            raise unittest.SkipTest(
+                "force_ssl not tested on %s" % self.__class__.__name__
+            )
 
     def test_amp_clientid_integration(self):
-        writer = AnalyticsWriter('UA-123123-1', mode=self.mode, amp_clientid_integration=True, json_dumps_callable=custom_json_dumps_sorted)
+        writer = AnalyticsWriter(
+            "UA-123123-1",
+            mode=self.mode,
+            amp_clientid_integration=True,
+            json_dumps_callable=custom_json_dumps_sorted,
+        )
         as_html = writer.render()
         if PRINT_RENDERS:
             print(as_html)
         self.assertEqual(as_html, self.data__test_amp_clientid_integration)
-        
-        for kwarg, expected_html in self.data__test_amp_clientid_integration_head.items():
-            writer = AnalyticsWriter('UA-123123-1', mode=self.mode, amp_clientid_integration=kwarg, json_dumps_callable=custom_json_dumps_sorted)
+
+        for (
+            kwarg,
+            expected_html,
+        ) in self.data__test_amp_clientid_integration_head.items():
+            writer = AnalyticsWriter(
+                "UA-123123-1",
+                mode=self.mode,
+                amp_clientid_integration=kwarg,
+                json_dumps_callable=custom_json_dumps_sorted,
+            )
             as_html = writer.render_head()
             if PRINT_RENDERS:
                 print(as_html)
             self.assertEqual(as_html, expected_html)
-    
-    
+
+
 # global dicts used for tests
 # this lets us compare the different formats
 data__transaction_dict_bad = {
     # missing data; should raise an error on add
 }
 data__transaction_dict_1 = {
-    '*id': 1234,
-    '*affiliation': 'ga.js',
-    '*total': '100.00',
-    '*tax': '10.00',
-    '*shipping': '5.00',
-    '*city': 'brooklyn',
-    '*state': 'new york',
-    '*country': 'usa',
+    "*id": 1234,
+    "*affiliation": "ga.js",
+    "*total": "100.00",
+    "*tax": "10.00",
+    "*shipping": "5.00",
+    "*city": "brooklyn",
+    "*state": "new york",
+    "*country": "usa",
 }
 data__transaction_dict_2 = {
-    '*id': 1234,
-    '*affiliation': 'analytics.js',
-    '*revenue': '115.00',
-    '*tax': '10.00',
-    '*shipping': '5.00',
+    "*id": 1234,
+    "*affiliation": "analytics.js",
+    "*revenue": "115.00",
+    "*tax": "10.00",
+    "*shipping": "5.00",
 }
 data__transaction_item_dict = {
-    '*transaction_id': 1234,  # transaction_id
-    '*name': 'T-Shirt',                # Product name. Required
-    '*sku': 'DD44',                    # SKU/code
-    '*category': u'Greeñ Medium',       # Category or variation
-    '*price': '100.00',                # Unit price
-    '*quantity': '1'
+    "*transaction_id": 1234,  # transaction_id
+    "*name": "T-Shirt",  # Product name. Required
+    "*sku": "DD44",  # SKU/code
+    "*category": u"Greeñ Medium",  # Category or variation
+    "*price": "100.00",  # Unit price
+    "*quantity": "1",
 }
 
 data__transaction_item_dict_bad = {
-    '*id': 1234,  # transaction_id presented incorrectly; should raise an error on add
+    "*id": 1234  # transaction_id presented incorrectly; should raise an error on add
 }
 
 data__event_1 = {
-    '*category': 'Videos',
-    '*action': 'Play',
-    '*label': 'action',
-    '*value': 47,
-    '*non_interaction': True,
+    "*category": "Videos",
+    "*action": "Play",
+    "*label": "action",
+    "*value": 47,
+    "*non_interaction": True,
 }
 data__event_2 = {
-    '*category': 'Videos',
-    '*action': 'Play',
-    '*label': 'action',
-    '*value': 47,
-    '*non_interaction': None
+    "*category": "Videos",
+    "*action": "Play",
+    "*label": "action",
+    "*value": 47,
+    "*non_interaction": None,
 }
 data__event_3 = {
-    '*category': 'Videos',
-    '*action': 'Play',
-    '*label': 'action',
-    '*value': 47,
-    '*non_interaction': False
+    "*category": "Videos",
+    "*action": "Play",
+    "*label": "action",
+    "*value": 47,
+    "*non_interaction": False,
 }
 data__event_4__ANALYTICS_hit = {
-    '*category': 'category',
-    '*action': 'action',
-    'metric18': 8000,
+    "*category": "category",
+    "*action": "action",
+    "metric18": 8000,
 }
-data__custom_variables__GA = (6, 'author', 'jonathan', 1, )  # index, name, value, opt_scope=None)
-data__custom_variables__ANALYTICS = ('dimension9', 'name', 'jonathan', None, )  # index, name, value, opt_scope=None)
+data__custom_variables__GA = (
+    6,
+    "author",
+    "jonathan",
+    1,
+)  # index, name, value, opt_scope=None)
+data__custom_variables__ANALYTICS = (
+    "dimension9",
+    "name",
+    "jonathan",
+    None,
+)  # index, name, value, opt_scope=None)
 
 
 class TestGA(CoreTests, unittest.TestCase):
@@ -535,7 +626,9 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 })();
 </script>
 <!-- End Google Analytics -->"""
-    data__test_crossdomain__html_multi = data__test_crossdomain__html  # this doesn't support it the same way
+    data__test_crossdomain__html_multi = (
+        data__test_crossdomain__html
+    )  # this doesn't support it the same way
     data__test_crossdomain__html_link_attrs = '''onclick="_gaq.push(['_link','https://example.com/foo.html']); return false;"'''
     data__test_custom_variables__html = """\
 <!-- Google Analytics -->
@@ -651,11 +744,13 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 <!-- End Google Analytics -->"""
     data__test_userid_prerender__html = data__test_pageview__html
     data__test_userid_prerender_multi__html = data__test_pageview_multi__html
-    data__test_userid_postrender__html = ''
-    data__test_userid_postrender_multi__html = ''
+    data__test_userid_postrender__html = ""
+    data__test_userid_postrender_multi__html = ""
     # force_ssl, expected_html
     data__test_force_ssl = (
-        (False, """\
+        (
+            False,
+            """\
 <!-- Google Analytics -->
 <script type="text/javascript">
 var _gaq = _gaq || [];
@@ -667,8 +762,11 @@ ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') 
 var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
 })();
 </script>
-<!-- End Google Analytics -->"""),
-        (True, """\
+<!-- End Google Analytics -->""",
+        ),
+        (
+            True,
+            """\
 <!-- Google Analytics -->
 <script type="text/javascript">
 var _gaq = _gaq || [];
@@ -681,12 +779,13 @@ ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') 
 var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
 })();
 </script>
-<!-- End Google Analytics -->"""),
+<!-- End Google Analytics -->""",
+        ),
     )
-    data__test_amp_clientid_integration = data__test_pageview__html  # not sure this functionality is possible under ga.js
-    data__test_amp_clientid_integration_head = {True: '',
-                                                False: ''
-                                                }
+    data__test_amp_clientid_integration = (
+        data__test_pageview__html
+    )  # not sure this functionality is possible under ga.js
+    data__test_amp_clientid_integration_head = {True: "", False: ""}
 
 
 class TestAnalytics(CoreTests, unittest.TestCase):
@@ -814,7 +913,7 @@ ga('send','event','Videos','Play','action',47,{"nonInteraction":false});
 ga('send','event','category','action');
 </script>
 <!-- End Google Analytics -->"""
-    data__test_crossdomain__html_link_attrs = ''  # empty string
+    data__test_crossdomain__html_link_attrs = ""  # empty string
     data__test_custom_variables__html = """\
 <!-- Google Analytics -->
 <script type="text/javascript">
@@ -828,7 +927,9 @@ ga('send','pageview');
 </script>
 <!-- End Google Analytics -->"""
     data_global_custom_data = (
-        (True, '''\
+        (
+            True,
+            """\
 <!-- Google Analytics -->
 <script type="text/javascript">
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -839,8 +940,11 @@ ga('create','UA-123123-1','auto');
 ga('set',{"dimension9":"jonathan"});
 ga('send','pageview');
 </script>
-<!-- End Google Analytics -->'''),
-        (False, '''\
+<!-- End Google Analytics -->""",
+        ),
+        (
+            False,
+            """\
 <!-- Google Analytics -->
 <script type="text/javascript">
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -850,7 +954,8 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 ga('create','UA-123123-1','auto');
 ga('send','pageview',{"dimension9":"jonathan"});
 </script>
-<!-- End Google Analytics -->'''),
+<!-- End Google Analytics -->""",
+        ),
     )
     data__test_custom_variables__global__html = """\
 <!-- Google Analytics -->
@@ -988,9 +1093,7 @@ ga('create','UA-123123-1','auto',{"useAmpClientId":true});
 ga('send','pageview');
 </script>
 <!-- End Google Analytics -->"""
-    data__test_amp_clientid_integration_head = {True: '',
-                                                False: ''
-                                                }
+    data__test_amp_clientid_integration_head = {True: "", False: ""}
 
 
 class TestGtag(CoreTests, unittest.TestCase):
@@ -1001,6 +1104,7 @@ class TestGtag(CoreTests, unittest.TestCase):
     python -munittest g_analytics_writer.tests.writing.TestGtag.test_advanced
     python -munittest g_analytics_writer.tests.writing.TestGtag.test_crossdomain
     """
+
     mode = AnalyticsMode.GTAG
     data__transaction_dict_good = data__transaction_dict_2
     data__transaction_dict_bad = data__transaction_dict_bad
@@ -1116,7 +1220,7 @@ gtag('event','Play',{"event_category":"Videos","event_label":"action","non_inter
 gtag('event','action',{"event_category":"category"}
 </script>
 <!-- End Google Analytics -->"""
-    data__test_crossdomain__html_link_attrs = ''  # empty string
+    data__test_crossdomain__html_link_attrs = ""  # empty string
     data__test_custom_variables__html = """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
@@ -1131,7 +1235,10 @@ gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
 <!-- End Google Analytics -->"""
     # gtag_dimensions_strategy, global_custom_data, expected_html
     data_gtag_dimensions_strategies = (
-        (GtagDimensionsStrategy.SET_CONFIG, True, """\
+        (
+            GtagDimensionsStrategy.SET_CONFIG,
+            True,
+            """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -1142,8 +1249,12 @@ gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
 gtag('set',{"name":"jonathan"});
 gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
 </script>
-<!-- End Google Analytics -->"""),
-        (GtagDimensionsStrategy.SET_CONFIG, False, """\
+<!-- End Google Analytics -->""",
+        ),
+        (
+            GtagDimensionsStrategy.SET_CONFIG,
+            False,
+            """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -1154,8 +1265,12 @@ gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
 gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
 gtag('event','pageview',{"name":"jonathan"});
 </script>
-<!-- End Google Analytics -->"""),
-        (GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT, True, """\
+<!-- End Google Analytics -->""",
+        ),
+        (
+            GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT,
+            True,
+            """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -1167,8 +1282,12 @@ gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"send_page_view"
 gtag('set',{"name":"jonathan"});
 gtag('event','pageview');
 </script>
-<!-- End Google Analytics -->"""),
-        (GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT, False, """\
+<!-- End Google Analytics -->""",
+        ),
+        (
+            GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT,
+            False,
+            """\
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123123-1"></script>
 <script>
@@ -1179,7 +1298,8 @@ gtag('event','pageview');
 gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"send_page_view":false});
 gtag('event','pageview',{"name":"jonathan"});
 </script>
-<!-- End Google Analytics -->"""),
+<!-- End Google Analytics -->""",
+        ),
     )
     data__test_custom_variables__global__html = data__test_custom_variables__html
     data__test_advanced__html = u"""\
@@ -1259,9 +1379,7 @@ gtag('config', 'UA-123123-3', {'user_id': 'cecil'});"""
 gtag('config','UA-123123-1',{"use_amp_client_id":true});
 </script>
 <!-- End Google Analytics -->"""
-    data__test_amp_clientid_integration_head = {True: '',
-                                                False: ''
-                                                }
+    data__test_amp_clientid_integration_head = {True: "", False: ""}
 
 
 class TestAmp(CoreTests, unittest.TestCase):
@@ -1272,6 +1390,7 @@ class TestAmp(CoreTests, unittest.TestCase):
     python -munittest g_analytics_writer.tests.writing.TestAmp.test_advanced
     python -munittest g_analytics_writer.tests.writing.TestAmp.test_crossdomain
     """
+
     mode = AnalyticsMode.AMP
     data__transaction_dict_good = data__transaction_dict_2
     data__transaction_dict_bad = data__transaction_dict_bad
@@ -1330,7 +1449,6 @@ class TestAmp(CoreTests, unittest.TestCase):
 </amp-analytics>
 <!-- End Google Analytics -->"""
 
-
     data__test_crossdomain__html = """\
 <!-- Google Analytics -->
 <amp-analytics type="googleanalytics">
@@ -1355,7 +1473,7 @@ class TestAmp(CoreTests, unittest.TestCase):
 </script>
 </amp-analytics>
 <!-- End Google Analytics -->"""
-    data__test_crossdomain__html_link_attrs = ''  # empty string
+    data__test_crossdomain__html_link_attrs = ""  # empty string
     data__test_custom_variables__html = """\
 <!-- Google Analytics -->
 <amp-analytics type="googleanalytics">
@@ -1367,10 +1485,26 @@ class TestAmp(CoreTests, unittest.TestCase):
 
     # gtag_dimensions_strategy, global_custom_data, expected_html
     data_gtag_dimensions_strategies = (
-        (GtagDimensionsStrategy.SET_CONFIG, True, """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->"""),
-        (GtagDimensionsStrategy.SET_CONFIG, False, """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->"""),
-        (GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT, True, """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->"""),
-        (GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT, False, """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->"""),
+        (
+            GtagDimensionsStrategy.SET_CONFIG,
+            True,
+            """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->""",
+        ),
+        (
+            GtagDimensionsStrategy.SET_CONFIG,
+            False,
+            """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->""",
+        ),
+        (
+            GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT,
+            True,
+            """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->""",
+        ),
+        (
+            GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT,
+            False,
+            """<!-- Google Analytics -->\n<amp-analytics type="googleanalytics">\n<script type="application/json">\n{"extraUrlParams":{"cd9":"jonathan"},"triggers":{"trackPageview":{"on":"visible","request":"pageview"}},"vars":{"account":"UA-123123-1"}}\n</script>\n</amp-analytics>\n<!-- End Google Analytics -->""",
+        ),
     )
     data__test_custom_variables__global__html = data__test_custom_variables__html
     data__test_advanced__html = """\
@@ -1415,15 +1549,17 @@ class TestAmp(CoreTests, unittest.TestCase):
 </script>
 </amp-analytics>
 <!-- End Google Analytics -->"""
-    data__test_amp_clientid_integration_head = {True: '''<meta name="amp-google-client-id-api" content="googleanalytics">\n<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>''',
-                                                False: '''<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>''',
-                                                }
+    data__test_amp_clientid_integration_head = {
+        True: """<meta name="amp-google-client-id-api" content="googleanalytics">\n<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>""",
+        False: """<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>""",
+    }
 
 
 class TestSetup(unittest.TestCase):
-
     def test_defaults(self):
-        writer = AnalyticsWriter('UA-123123-1', json_dumps_callable=custom_json_dumps_sorted)
+        writer = AnalyticsWriter(
+            "UA-123123-1", json_dumps_callable=custom_json_dumps_sorted
+        )
         self.assertEqual(writer.mode, AnalyticsMode._default)
         self.assertEqual(AnalyticsMode._default, AnalyticsMode.ANALYTICS)
         self.assertTrue(writer.use_comments)
@@ -1432,14 +1568,15 @@ class TestSetup(unittest.TestCase):
         self.assertTrue(writer.global_custom_data)
 
     def test_passin(self):
-        writer = AnalyticsWriter('UA-123123-1',
-                                 json_dumps_callable=custom_json_dumps_sorted,
-                                 mode=AnalyticsMode.GA_JS,
-                                 use_comments=False,
-                                 single_push=True,
-                                 force_ssl=True,
-                                 global_custom_data=False,
-                                 )
+        writer = AnalyticsWriter(
+            "UA-123123-1",
+            json_dumps_callable=custom_json_dumps_sorted,
+            mode=AnalyticsMode.GA_JS,
+            use_comments=False,
+            single_push=True,
+            force_ssl=True,
+            global_custom_data=False,
+        )
         self.assertEqual(writer.mode, AnalyticsMode.GA_JS)
         self.assertFalse(writer.use_comments)
         self.assertTrue(writer.single_push)

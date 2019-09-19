@@ -3,10 +3,11 @@ from json import dumps as _json_dumps
 
 # logging
 import logging
+
 log = logging.getLogger(__name__)
 
 
-__VERSION__ = '0.3.1'
+__VERSION__ = "0.3.2rc"
 
 
 # ==============================================================================
@@ -24,8 +25,8 @@ their Creative Commons Attribution 3.0 License
 
 
 # make these into package vars
-PREFIXLEN_dimension = len('dimension')
-PREFIXLEN_metric = len('metric')
+PREFIXLEN_dimension = len("dimension")
+PREFIXLEN_metric = len("metric")
 
 
 def json_dumps(data):
@@ -38,7 +39,7 @@ def json_dumps(data):
         def my_custom_dumps(data):
             return json.dumps(data, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
     """
-    return _json_dumps(data, separators=(',', ':'))
+    return _json_dumps(data, separators=(",", ":"))
 
 
 def generate_tracker_name(secondary_account):
@@ -46,10 +47,10 @@ def generate_tracker_name(secondary_account):
     this is used by `ga.js` and `analytics.js` to generate unique tracker names
     """
     secondary_account_name = None
-    tracker_prefix = ''
+    tracker_prefix = ""
     if secondary_account is not False:
         secondary_account_name = "trkr%s" % secondary_account
-        tracker_prefix = '%s.' % secondary_account_name
+        tracker_prefix = "%s." % secondary_account_name
     return (secondary_account_name, tracker_prefix)
 
 
@@ -61,147 +62,191 @@ class AnalyticsMode(object):
     AMP = 5
 
     _default = ANALYTICS
-    _valid_modes = (GA_JS,
-                    ANALYTICS,
-                    GTAG,
-                    AMP,
-                    )
-    _supports_single_push = (GA_JS, )
+    _valid_modes = (GA_JS, ANALYTICS, GTAG, AMP)
+    _supports_single_push = (GA_JS,)
 
 
 class GtagDimensionsStrategy(object):
     SET_CONFIG = 1
     CONFIGNOPAGEVIEW_SET_EVENT = 2
 
-    _valid = (SET_CONFIG,
-              CONFIGNOPAGEVIEW_SET_EVENT,
-              )
+    _valid = (SET_CONFIG, CONFIGNOPAGEVIEW_SET_EVENT)
 
 
 translation_matrix = {
-    '*event': {
-        '*action': {AnalyticsMode.ANALYTICS: 'eventAction',
-                    },
-        '*category': {AnalyticsMode.ANALYTICS: 'eventCategory',
-                      AnalyticsMode.GTAG: 'event_category',
-                      },
-        '*label': {AnalyticsMode.ANALYTICS: 'eventLabel',
-                   AnalyticsMode.GTAG: 'event_label',
-                   },
-        '*value': {AnalyticsMode.ANALYTICS: 'eventValue',
-                   AnalyticsMode.GTAG: 'value',
-                   },
-        '*non_interaction': {AnalyticsMode.ANALYTICS: 'nonInteraction',
-                             AnalyticsMode.GTAG: 'non_interaction',
-                             },
+    "*event": {
+        "*action": {AnalyticsMode.ANALYTICS: "eventAction"},
+        "*category": {
+            AnalyticsMode.ANALYTICS: "eventCategory",
+            AnalyticsMode.GTAG: "event_category",
+        },
+        "*label": {
+            AnalyticsMode.ANALYTICS: "eventLabel",
+            AnalyticsMode.GTAG: "event_label",
+        },
+        "*value": {AnalyticsMode.ANALYTICS: "eventValue", AnalyticsMode.GTAG: "value"},
+        "*non_interaction": {
+            AnalyticsMode.ANALYTICS: "nonInteraction",
+            AnalyticsMode.GTAG: "non_interaction",
+        },
     },
-    '*transaction': {
-        '*id': {AnalyticsMode.GA_JS: 'transactionId',
-                AnalyticsMode.ANALYTICS: 'id',
-                AnalyticsMode.GTAG: 'transaction_id',
-                },
-        '*affiliation': {AnalyticsMode.GA_JS: 'affiliation',
-                         AnalyticsMode.ANALYTICS: 'affiliation',
-                         AnalyticsMode.GTAG: 'affiliation',
-                         },
-        '*total': {AnalyticsMode.GA_JS: 'total',
-                   },
-        '*revenue': {AnalyticsMode.ANALYTICS: 'revenue',
-                     AnalyticsMode.GTAG: 'value',
-                     },
-        '*tax': {AnalyticsMode.GA_JS: 'tax',
-                 AnalyticsMode.ANALYTICS: 'tax',
-                 AnalyticsMode.GTAG: 'tax',
-                 },
-        '*shipping': {AnalyticsMode.GA_JS: 'shipping',
-                      AnalyticsMode.ANALYTICS: 'shipping',
-                      AnalyticsMode.GTAG: 'shipping',
-                      },
-        '*city': {AnalyticsMode.ANALYTICS: 'city',
-                  },
-        '*state': {AnalyticsMode.ANALYTICS: 'state',
-                   },
-        '*country': {AnalyticsMode.ANALYTICS: 'country',
-                     },
-        '*coupon': {AnalyticsMode.ANALYTICS: 'coupon',
-                    AnalyticsMode.GTAG: 'coupon',
-                    },
-        '*list_name': {AnalyticsMode.ANALYTICS: 'list',
-                       AnalyticsMode.GTAG: 'list_name',
-                       },
-        '*checkout_step': {AnalyticsMode.ANALYTICS: 'step',
-                           AnalyticsMode.GTAG: 'checkout_step',
-                           },
-        '*checkout_option': {AnalyticsMode.ANALYTICS: 'option',
-                             AnalyticsMode.GTAG: 'checkout_option',
-                             },
+    "*transaction": {
+        "*id": {
+            AnalyticsMode.GA_JS: "transactionId",
+            AnalyticsMode.ANALYTICS: "id",
+            AnalyticsMode.GTAG: "transaction_id",
+        },
+        "*affiliation": {
+            AnalyticsMode.GA_JS: "affiliation",
+            AnalyticsMode.ANALYTICS: "affiliation",
+            AnalyticsMode.GTAG: "affiliation",
+        },
+        "*total": {AnalyticsMode.GA_JS: "total"},
+        "*revenue": {AnalyticsMode.ANALYTICS: "revenue", AnalyticsMode.GTAG: "value"},
+        "*tax": {
+            AnalyticsMode.GA_JS: "tax",
+            AnalyticsMode.ANALYTICS: "tax",
+            AnalyticsMode.GTAG: "tax",
+        },
+        "*shipping": {
+            AnalyticsMode.GA_JS: "shipping",
+            AnalyticsMode.ANALYTICS: "shipping",
+            AnalyticsMode.GTAG: "shipping",
+        },
+        "*city": {AnalyticsMode.ANALYTICS: "city"},
+        "*state": {AnalyticsMode.ANALYTICS: "state"},
+        "*country": {AnalyticsMode.ANALYTICS: "country"},
+        "*coupon": {AnalyticsMode.ANALYTICS: "coupon", AnalyticsMode.GTAG: "coupon"},
+        "*list_name": {
+            AnalyticsMode.ANALYTICS: "list",
+            AnalyticsMode.GTAG: "list_name",
+        },
+        "*checkout_step": {
+            AnalyticsMode.ANALYTICS: "step",
+            AnalyticsMode.GTAG: "checkout_step",
+        },
+        "*checkout_option": {
+            AnalyticsMode.ANALYTICS: "option",
+            AnalyticsMode.GTAG: "checkout_option",
+        },
     },
-    '*transaction_item': {
-        '*transaction_id': {AnalyticsMode.GA_JS: 'transactionId',
-                            AnalyticsMode.ANALYTICS: 'id',
-                            AnalyticsMode.GTAG: None,  # None means don't use it
-                            },
-        '*sku': {AnalyticsMode.GA_JS: 'sku',
-                 AnalyticsMode.ANALYTICS: 'sku',
-                 AnalyticsMode.GTAG: 'id',
-                 },
-        '*name': {AnalyticsMode.GA_JS: 'name',
-                  AnalyticsMode.ANALYTICS: 'name',
-                  AnalyticsMode.GTAG: 'name',
-                  },
-        '*category': {AnalyticsMode.GA_JS: 'category',
-                      AnalyticsMode.ANALYTICS: 'category',
-                      AnalyticsMode.GTAG: 'category',
-                      },
-        '*price': {AnalyticsMode.GA_JS: 'price',
-                   AnalyticsMode.ANALYTICS: 'price',
-                   AnalyticsMode.GTAG: 'price',
-                   },
-        '*quantity': {AnalyticsMode.GA_JS: 'quantity',
-                      AnalyticsMode.ANALYTICS: 'quantity',
-                      AnalyticsMode.GTAG: 'quantity',
-                      },
-        '*brand': {AnalyticsMode.GTAG: 'brand',
-                   },
-        '*variant': {AnalyticsMode.GTAG: 'variant',
-                     },
-        '*coupon': {AnalyticsMode.GTAG: 'coupon',
-                    },
-        '*list_position': {AnalyticsMode.GTAG: 'list_position',
-                           },
+    "*transaction_item": {
+        "*transaction_id": {
+            AnalyticsMode.GA_JS: "transactionId",
+            AnalyticsMode.ANALYTICS: "id",
+            AnalyticsMode.GTAG: None,  # None means don't use it
+        },
+        "*sku": {
+            AnalyticsMode.GA_JS: "sku",
+            AnalyticsMode.ANALYTICS: "sku",
+            AnalyticsMode.GTAG: "id",
+        },
+        "*name": {
+            AnalyticsMode.GA_JS: "name",
+            AnalyticsMode.ANALYTICS: "name",
+            AnalyticsMode.GTAG: "name",
+        },
+        "*category": {
+            AnalyticsMode.GA_JS: "category",
+            AnalyticsMode.ANALYTICS: "category",
+            AnalyticsMode.GTAG: "category",
+        },
+        "*price": {
+            AnalyticsMode.GA_JS: "price",
+            AnalyticsMode.ANALYTICS: "price",
+            AnalyticsMode.GTAG: "price",
+        },
+        "*quantity": {
+            AnalyticsMode.GA_JS: "quantity",
+            AnalyticsMode.ANALYTICS: "quantity",
+            AnalyticsMode.GTAG: "quantity",
+        },
+        "*brand": {AnalyticsMode.GTAG: "brand"},
+        "*variant": {AnalyticsMode.GTAG: "variant"},
+        "*coupon": {AnalyticsMode.GTAG: "coupon"},
+        "*list_position": {AnalyticsMode.GTAG: "list_position"},
     },
 }
 
 
 field_requirements = {
-    '*transaction': {
+    "*transaction": {
         AnalyticsMode.GA_JS: {
-            'required': ('*id', '*total', ),
-            'optional': ('*affiliation', '*tax', '*shipping', '*city', '*state', '*country', ),
-            'order': ('*id', '*affiliation', '*total', '*tax', '*shipping', '*city', '*state', '*country', ),
+            "required": ("*id", "*total"),
+            "optional": (
+                "*affiliation",
+                "*tax",
+                "*shipping",
+                "*city",
+                "*state",
+                "*country",
+            ),
+            "order": (
+                "*id",
+                "*affiliation",
+                "*total",
+                "*tax",
+                "*shipping",
+                "*city",
+                "*state",
+                "*country",
+            ),
         },
         AnalyticsMode.ANALYTICS: {
-            'required': ('*id', ),
-            'optional': ('*affiliation', '*revenue', '*tax', '*shipping', '*coupon', '*list_name', '*checkout_step', '*checkout_option'),
+            "required": ("*id",),
+            "optional": (
+                "*affiliation",
+                "*revenue",
+                "*tax",
+                "*shipping",
+                "*coupon",
+                "*list_name",
+                "*checkout_step",
+                "*checkout_option",
+            ),
         },
         AnalyticsMode.GTAG: {
-            'required': ('*id', ),
-            'optional': ('*affiliation', '*revenue', '*tax', '*shipping', '*coupon', '*list_name', '*checkout_step', '*checkout_option', ),
+            "required": ("*id",),
+            "optional": (
+                "*affiliation",
+                "*revenue",
+                "*tax",
+                "*shipping",
+                "*coupon",
+                "*list_name",
+                "*checkout_step",
+                "*checkout_option",
+            ),
         },
     },
-    '*transaction_item': {
+    "*transaction_item": {
         AnalyticsMode.GA_JS: {
-            'required': ('*transaction_id', '*sku', '*name', '*price', '*quantity', ),
-            'optional': ('*category', ),
-            'order': ('*transaction_id', '*sku', '*name', '*category', '*price', '*quantity', ),
+            "required": ("*transaction_id", "*sku", "*name", "*price", "*quantity"),
+            "optional": ("*category",),
+            "order": (
+                "*transaction_id",
+                "*sku",
+                "*name",
+                "*category",
+                "*price",
+                "*quantity",
+            ),
         },
         AnalyticsMode.ANALYTICS: {
-            'required': ('*transaction_id', '*sku', '*name', ),
-            'optional': ('*category', '*price', '*quantity', ),
+            "required": ("*transaction_id", "*sku", "*name"),
+            "optional": ("*category", "*price", "*quantity"),
         },
         AnalyticsMode.GTAG: {
-            'required': ('*transaction_id', '*sku', '*name', ),
-            'optional': ('*category', '*price', '*quantity', '*brand', '*variant', '*coupon', '*list_position'),
+            "required": ("*transaction_id", "*sku", "*name"),
+            "optional": (
+                "*category",
+                "*price",
+                "*quantity",
+                "*brand",
+                "*variant",
+                "*coupon",
+                "*list_position",
+            ),
         },
     },
 }
@@ -224,7 +269,7 @@ def source_dict_to_ordered_args(source_dict, args_order, remove_undefined=None):
     for _field in args_order:
         _value = source_dict.get(_field, None)
         if _value is None:
-            _value = 'undefined'  # it's undefined(js) keyword
+            _value = "undefined"  # it's undefined(js) keyword
         elif type(_value) in (int, float):
             _value = "%s" % _value  # turn it into a string
         elif type(_value) is bool:
@@ -235,10 +280,10 @@ def source_dict_to_ordered_args(source_dict, args_order, remove_undefined=None):
     if remove_undefined:
         _max_defined = None
         for _idx, _value in enumerate(item_args):
-            if _value != 'undefined':
+            if _value != "undefined":
                 _max_defined = _idx
         if _max_defined is not None:
-            item_args = item_args[:(_max_defined + 1)]
+            item_args = item_args[: (_max_defined + 1)]
         else:
             # TODO: log/error
             item_args = []
@@ -250,6 +295,7 @@ class InvalidTag(Exception):
     Base exception for invalid tags.
     A global instance of `INVALID_TAG` will be created and used for comparisons
     """
+
     pass
 
 
@@ -371,29 +417,31 @@ class AnalyticsWriter(object):
         self.gtag_dimensions_strategy = gtag_dimensions_strategy
 
         self.data_struct = {
-            '*account_id': account_id,
-            '*additional_accounts': [],
-            '*tracked_events': [],
-            '*custom_dimensions': {},
-            '*custom_metrics': {},
-            '*transaction': {},  # dict of k/v by transactionId
-            '*transaction_items': {},  # dict of k:LIST by transactionId
-            '*crossdomain_tracking': None,
-            '*user_id': None,
+            "*account_id": account_id,
+            "*additional_accounts": [],
+            "*tracked_events": [],
+            "*custom_dimensions": {},
+            "*custom_metrics": {},
+            "*transaction": {},  # dict of k/v by transactionId
+            "*transaction_items": {},  # dict of k:LIST by transactionId
+            "*crossdomain_tracking": None,
+            "*user_id": None,
         }
 
     def set_account(self, account_id):
         """This should really never be called, best to setup during __init__, where it is required"""
-        self.data_struct['*account_id'] = account_id
+        self.data_struct["*account_id"] = account_id
 
     def set_account_additional__add(self, account_id):
         """add an additional account id to send the data to.  please note - this is only tested to work with the async method.
         """
-        if account_id not in self.data_struct['*additional_accounts']:
-            self.data_struct['*additional_accounts'].append(account_id)
+        if account_id not in self.data_struct["*additional_accounts"]:
+            self.data_struct["*additional_accounts"].append(account_id)
 
     def set_account_additional__del(self, account_id):
-        self.data_struct['*additional_accounts'] = [i for i in self.data_struct['*additional_accounts'] if i != account_id]
+        self.data_struct["*additional_accounts"] = [
+            i for i in self.data_struct["*additional_accounts"] if i != account_id
+        ]
 
     def track_event(self, track_dict):
         """
@@ -504,7 +552,7 @@ class AnalyticsWriter(object):
             `opt_value`           Int     An optional value associated with the event. You can see your event values in the Overview, Categories, and Actions reports, where they are listed by event or aggregated across events, depending upon your report view.
             `opt_noninteraction`  Boolean Default value is false. By default, the event hit sent by _trackEvent() will impact a visitor's bounce rate. By setting this parameter to true, this event hit will not be used in bounce rate calculations.
         """
-        self.data_struct['*tracked_events'].append(track_dict)
+        self.data_struct["*tracked_events"].append(track_dict)
 
     def set_custom_variable(self, index, name, value, opt_scope=None):
         """
@@ -605,13 +653,10 @@ class AnalyticsWriter(object):
 
         """
         if type(index) is not int:
-            if index.startswith('dimension'):
+            if index.startswith("dimension"):
                 index = index[PREFIXLEN_dimension:]
 
-        self.data_struct['*custom_dimensions'][index] = (name,
-                                                         value,
-                                                         opt_scope,
-                                                         )
+        self.data_struct["*custom_dimensions"][index] = (name, value, opt_scope)
 
     def set_custom_metric(self, index, name, value):
         """
@@ -624,13 +669,13 @@ class AnalyticsWriter(object):
         supported
         """
         if type(index) is not int:
-            if index.startswith('metric'):
+            if index.startswith("metric"):
                 index = index[PREFIXLEN_metric:]
-        self.data_struct['*custom_metrics'][index] = (name,
-                                                      value,
-                                                      )
+        self.data_struct["*custom_metrics"][index] = (name, value)
 
-    def set_crossdomain_tracking(self, domains, decorate_forms=None, accept_incoming=None):
+    def set_crossdomain_tracking(
+        self, domains, decorate_forms=None, accept_incoming=None
+    ):
         """
         enable crossdomain tracking
 
@@ -682,11 +727,12 @@ class AnalyticsWriter(object):
         Info:   the first domain will be used to set the cookie, others will be ignored.
         """
         if type(domains) not in (list, tuple):
-            domains = [domains, ]
-        self.data_struct['*crossdomain_tracking'] = {'domains': domains,
-                                                     'decorate_forms': decorate_forms,
-                                                     'accept_incoming': accept_incoming,
-                                                     }
+            domains = [domains]
+        self.data_struct["*crossdomain_tracking"] = {
+            "domains": domains,
+            "decorate_forms": decorate_forms,
+            "accept_incoming": accept_incoming,
+        }
 
     def render_crossdomain_link_attrs(self, link):
         """
@@ -701,7 +747,7 @@ class AnalyticsWriter(object):
         if self.mode == AnalyticsMode.GA_JS:
             # should this compare to the domain?
             return '''onclick="_gaq.push(['_link','%s']); return false;"''' % link
-        return ''
+        return ""
 
     def set_user_id(self, user_id):
         """
@@ -719,7 +765,7 @@ class AnalyticsWriter(object):
         -----
         may not be supported
         """
-        self.data_struct['*user_id'] = user_id
+        self.data_struct["*user_id"] = user_id
 
     def setrender_user_id(self, user_id):
         """
@@ -741,27 +787,41 @@ class AnalyticsWriter(object):
             // Setting the userId doesn't send data to Google Analytics.
             // You must also use a pageview or event to send the data.
         """
-        self.data_struct['*user_id'] = user_id
+        self.data_struct["*user_id"] = user_id
         if self.mode == AnalyticsMode.ANALYTICS:
             payload = []
             payload.append("""ga('set','userId','%s');""" % user_id)
-            payload.append("""ga('send','event','authentication','user-id available');""")
-            for (secondary_account, account_id) in enumerate(self.data_struct['*additional_accounts']):
-                (secondary_account_name,
-                 tracker_prefix
-                 ) = generate_tracker_name(secondary_account)
-                payload.append("""ga('%sset','userId','%s');""" % (tracker_prefix, user_id))
-                payload.append("""ga('%ssend','event','authentication','user-id available');""" % tracker_prefix)
-            return '\n'.join(payload)
+            payload.append(
+                """ga('send','event','authentication','user-id available');"""
+            )
+            for (secondary_account, account_id) in enumerate(
+                self.data_struct["*additional_accounts"]
+            ):
+                (secondary_account_name, tracker_prefix) = generate_tracker_name(
+                    secondary_account
+                )
+                payload.append(
+                    """ga('%sset','userId','%s');""" % (tracker_prefix, user_id)
+                )
+                payload.append(
+                    """ga('%ssend','event','authentication','user-id available');"""
+                    % tracker_prefix
+                )
+            return "\n".join(payload)
         elif self.mode == AnalyticsMode.GTAG:
             # https://developers.google.com/analytics/devguides/collection/gtagjs/cookies-user-id
             payload = []
-            account_id = self.data_struct['*account_id']
-            payload.append("""gtag('config', '%s', {'user_id': '%s'});""" % (account_id, user_id))
-            for alt_account_id in self.data_struct['*additional_accounts']:
-                payload.append("""gtag('config', '%s', {'user_id': '%s'});""" % (alt_account_id, user_id))
-            return '\n'.join(payload)
-        return ''
+            account_id = self.data_struct["*account_id"]
+            payload.append(
+                """gtag('config', '%s', {'user_id': '%s'});""" % (account_id, user_id)
+            )
+            for alt_account_id in self.data_struct["*additional_accounts"]:
+                payload.append(
+                    """gtag('config', '%s', {'user_id': '%s'});"""
+                    % (alt_account_id, user_id)
+                )
+            return "\n".join(payload)
+        return ""
 
     def add_transaction(self, track_dict):
         """
@@ -918,13 +978,13 @@ class AnalyticsWriter(object):
         --------------------------------+---------------------------------------
         """
         # stash this into a dict
-        _transaction_id = track_dict.get('*id', '')
+        _transaction_id = track_dict.get("*id", "")
         if not _transaction_id:
             raise ValueError("missing `*id`")
         if _transaction_id != str(_transaction_id):
             _transaction_id = str(_transaction_id)
-            track_dict['*id'] = _transaction_id
-        self.data_struct['*transaction'][_transaction_id] = track_dict
+            track_dict["*id"] = _transaction_id
+        self.data_struct["*transaction"][_transaction_id] = track_dict
 
     def add_transaction_item(self, item_dict):
         """
@@ -1012,25 +1072,21 @@ class AnalyticsWriter(object):
                 String   price Required. Product price.
                 String   quantity Required. Purchase quantity.
         """
-        _transaction_id = item_dict.get('*transaction_id', '')
+        _transaction_id = item_dict.get("*transaction_id", "")
         if not _transaction_id:
             raise ValueError("missing `*transaction_id`")
         if _transaction_id != str(_transaction_id):
             _transaction_id = str(_transaction_id)
-            item_dict['*transaction_id'] = _transaction_id
-        if _transaction_id not in self.data_struct['*transaction_items']:
-            self.data_struct['*transaction_items'][_transaction_id] = []
-        self.data_struct['*transaction_items'][_transaction_id].append(item_dict)
+            item_dict["*transaction_id"] = _transaction_id
+        if _transaction_id not in self.data_struct["*transaction_items"]:
+            self.data_struct["*transaction_items"][_transaction_id] = []
+        self.data_struct["*transaction_items"][_transaction_id].append(item_dict)
 
     # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
     # Internal API render tools below
 
     def _render__ga_js__inner(
-        self,
-        script,
-        nested_script,
-        account_id,
-        secondary_account=False,
+        self, script, nested_script, account_id, secondary_account=False
     ):
         """
         this handles the inner render for `ga.js`
@@ -1123,15 +1179,19 @@ class AnalyticsWriter(object):
                 else:
                     script.append(u"""_gaq.push(['_gat._forceSSL']);""")
 
-        (secondary_account_name,
-         tracker_prefix
-         ) = generate_tracker_name(secondary_account)
+        (secondary_account_name, tracker_prefix) = generate_tracker_name(
+            secondary_account
+        )
 
         # _setAccount
         if _single_push:
-            nested_script.append(u"""['%s_setAccount','%s']""" % (tracker_prefix, account_id))
+            nested_script.append(
+                u"""['%s_setAccount','%s']""" % (tracker_prefix, account_id)
+            )
         else:
-            script.append(u"""_gaq.push(['%s_setAccount','%s']);""" % (tracker_prefix, account_id))
+            script.append(
+                u"""_gaq.push(['%s_setAccount','%s']);""" % (tracker_prefix, account_id)
+            )
 
         # crossdomain_tracking
         """
@@ -1198,24 +1258,40 @@ class AnalyticsWriter(object):
                     <a href="http://dogs.example-petstore.com/intro.html"
                        onclick="_gaq.push(['_link', 'http://dogs.example-petstore.com/intro.html']); return false;">
         """
-        if self.data_struct['*crossdomain_tracking']:
+        if self.data_struct["*crossdomain_tracking"]:
             # this operates on the FIRST domain
             if _single_push:
-                nested_script.append(u"""['%s_setDomainName','%s']""" % (tracker_prefix, self.data_struct['*crossdomain_tracking']['domains'][0]))
-                nested_script.append(u"""['%s_setAllowLinker',true]""" % (tracker_prefix))
+                nested_script.append(
+                    u"""['%s_setDomainName','%s']"""
+                    % (
+                        tracker_prefix,
+                        self.data_struct["*crossdomain_tracking"]["domains"][0],
+                    )
+                )
+                nested_script.append(
+                    u"""['%s_setAllowLinker',true]""" % (tracker_prefix)
+                )
             else:
-                script.append(u"""_gaq.push(['%s_setDomainName','%s']);""" % (tracker_prefix, self.data_struct['*crossdomain_tracking']['domains'][0]))
-                script.append(u"""_gaq.push(['%s_setAllowLinker',true]);""" % tracker_prefix)
+                script.append(
+                    u"""_gaq.push(['%s_setDomainName','%s']);"""
+                    % (
+                        tracker_prefix,
+                        self.data_struct["*crossdomain_tracking"]["domains"][0],
+                    )
+                )
+                script.append(
+                    u"""_gaq.push(['%s_setAllowLinker',true]);""" % tracker_prefix
+                )
 
         # _setCustomVar is next
-        for index in sorted(self.data_struct['*custom_dimensions'].keys()):
+        for index in sorted(self.data_struct["*custom_dimensions"].keys()):
             # for `ga.js`:
             # index == str(integer)
             # _payload == (name, value, opt_scope)
-            _payload = self.data_struct['*custom_dimensions'][index]
+            _payload = self.data_struct["*custom_dimensions"][index]
             if not _payload:
                 continue
-            _payload = (tracker_prefix, index, _payload[0], _payload[1], _payload[2], )
+            _payload = (tracker_prefix, index, _payload[0], _payload[1], _payload[2])
             if _payload[4]:
                 formatted = u"""['%s_setCustomVar',%s,'%s','%s',%s]""" % _payload
             else:
@@ -1237,37 +1313,48 @@ class AnalyticsWriter(object):
         # # _trackTrans
 
         # ecommerce
-        if self.data_struct['*transaction']:
+        if self.data_struct["*transaction"]:
             # _addTrans(transactionId, affiliation, total, tax, shipping, city, state, country)
             # _addItem(transactionId, sku, name, category, price, quantity)
-            _txn_fields_required = field_requirements['*transaction'][AnalyticsMode.GA_JS]['required']
+            _txn_fields_required = field_requirements["*transaction"][
+                AnalyticsMode.GA_JS
+            ]["required"]
             # _txn_fields_optional = field_requirements['*transaction'][AnalyticsMode.GA_JS]['optional']
-            _item_fields_required = field_requirements['*transaction_item'][AnalyticsMode.GA_JS]['required']
+            _item_fields_required = field_requirements["*transaction_item"][
+                AnalyticsMode.GA_JS
+            ]["required"]
             # _item_fields_optional = field_requirements['*transaction_item'][AnalyticsMode.GA_JS]['optional']
 
-            _txn_fields_order = field_requirements['*transaction'][AnalyticsMode.GA_JS]['order']
-            _item_fields_order = field_requirements['*transaction_item'][AnalyticsMode.GA_JS]['order']
+            _txn_fields_order = field_requirements["*transaction"][AnalyticsMode.GA_JS][
+                "order"
+            ]
+            _item_fields_order = field_requirements["*transaction_item"][
+                AnalyticsMode.GA_JS
+            ]["order"]
 
             # used to decide if we `send`
             _valid_transactions = False
-            for transaction_id in self.data_struct['*transaction'].keys():
-                _transaction_dict = self.data_struct['*transaction'][transaction_id]
+            for transaction_id in self.data_struct["*transaction"].keys():
+                _transaction_dict = self.data_struct["*transaction"][transaction_id]
                 try:
                     for _field in _txn_fields_required:
                         _value = _transaction_dict.get(_field, None)
                         if _value is None:
                             raise InvalidTag()
                 except Exception as e:
-                    _formatted = '/* invalid transaction */'
+                    _formatted = "/* invalid transaction */"
                     if _single_push:
                         nested_script.append(_formatted)
                     else:
                         script.append(u"""_gaq.push(%s);""" % _formatted)
                     continue
-                _transaction_args = source_dict_to_ordered_args(_transaction_dict, _txn_fields_order, remove_undefined=True)
-                _formatted = """['%(tracker_prefix)s_addTrans',%(joined_args)s]""" % {'tracker_prefix': tracker_prefix,
-                                                                                      'joined_args': ','.join(_transaction_args)
-                                                                                      }
+                _transaction_args = source_dict_to_ordered_args(
+                    _transaction_dict, _txn_fields_order, remove_undefined=True
+                )
+                _formatted = """['%(tracker_prefix)s_addTrans',%(joined_args)s]""" % {
+                    "tracker_prefix": tracker_prefix,
+                    "joined_args": ",".join(_transaction_args),
+                }
                 if _single_push:
                     nested_script.append(_formatted)
                 else:
@@ -1276,25 +1363,33 @@ class AnalyticsWriter(object):
                 # enough to `send` !
                 _valid_transactions = True
 
-                if transaction_id in self.data_struct['*transaction_items']:
-                    for _item_dict in self.data_struct['*transaction_items'][transaction_id]:
+                if transaction_id in self.data_struct["*transaction_items"]:
+                    for _item_dict in self.data_struct["*transaction_items"][
+                        transaction_id
+                    ]:
                         try:
                             for _field in _item_fields_required:
                                 _value = _item_dict.get(_field, None)
                                 if _value is None:
                                     raise InvalidTag()
                         except Exception:
-                            _formatted = '/* invalid transaction item */'
+                            _formatted = "/* invalid transaction item */"
                             if _single_push:
                                 nested_script.append(_formatted)
                             else:
                                 script.append(u"""_gaq.push(%s);""" % _formatted)
                             continue
 
-                        _item_args = source_dict_to_ordered_args(_item_dict, _item_fields_order, remove_undefined=True)
-                        _formatted = """['%(tracker_prefix)s_addItem',%(joined_args)s]""" % {'tracker_prefix': tracker_prefix,
-                                                                                             'joined_args': ','.join(_item_args)
-                                                                                             }
+                        _item_args = source_dict_to_ordered_args(
+                            _item_dict, _item_fields_order, remove_undefined=True
+                        )
+                        _formatted = (
+                            """['%(tracker_prefix)s_addItem',%(joined_args)s]"""
+                            % {
+                                "tracker_prefix": tracker_prefix,
+                                "joined_args": ",".join(_item_args),
+                            }
+                        )
                         if _single_push:
                             nested_script.append(_formatted)
                         else:
@@ -1310,16 +1405,16 @@ class AnalyticsWriter(object):
                     script.append(u"""_gaq.push(['%s_trackTrans']);""" % tracker_prefix)
 
         else:
-            if self.data_struct['*transaction_items']:
-                log.error('no transaction registered, but transaction_items added')
+            if self.data_struct["*transaction_items"]:
+                log.error("no transaction registered, but transaction_items added")
 
         # EVENTS
         # example: _trackEvent(category, action, opt_label, opt_value, opt_noninteraction)
         # the `_trackEvent` api expects the args in this order. render 'undefined' if we don't have it.
         _events = []
-        _event_fields_required = ('*category', '*action', )
-        _event_fields_optional = ('*label', '*value', '*non_interaction', )
-        for _event_dict in self.data_struct['*tracked_events']:
+        _event_fields_required = ("*category", "*action")
+        _event_fields_optional = ("*label", "*value", "*non_interaction")
+        for _event_dict in self.data_struct["*tracked_events"]:
             _event_args = []
             _event_args_optional = []
             # events are expected to be a series of args
@@ -1349,7 +1444,7 @@ class AnalyticsWriter(object):
                     # upgrade `None` to `"undefined"`, other items are strings
                     for _idx, _value in enumerate(_event_args_optional):
                         if _value is None:
-                            _value = 'undefined'  # it's undefined(js keyword)
+                            _value = "undefined"  # it's undefined(js keyword)
                         elif type(_value) in (int, float):
                             _value = "%s" % _value  # turn it into a string
                         elif type(_value) is bool:
@@ -1360,14 +1455,18 @@ class AnalyticsWriter(object):
                     # remove every 'undefined' from the tail of the list
                     _max_defined = None
                     for _idx, _value in enumerate(_event_args_optional):
-                        if _value != 'undefined':
+                        if _value != "undefined":
                             _max_defined = _idx
                     if _max_defined is not None:
-                        _event_args_optional = _event_args_optional[:(_max_defined + 1)]
+                        _event_args_optional = _event_args_optional[
+                            : (_max_defined + 1)
+                        ]
                     else:
                         _event_args_optional = []
             _event_args_all = _event_args + _event_args_optional
-            _events.append("""['%s_trackEvent',%s]""" % (tracker_prefix, ','.join(_event_args_all)))
+            _events.append(
+                """['%s_trackEvent',%s]""" % (tracker_prefix, ",".join(_event_args_all))
+            )
         if _events:
             for _event in _events:
                 if _single_push:
@@ -1399,102 +1498,106 @@ class AnalyticsWriter(object):
         if _single_push:
             script.append(u"""_gaq.push(""")
 
-        (script,
-         nested_script,
-         ) = self._render__ga_js__inner(script,
-                                        nested_script,
-                                        self.data_struct['*account_id'],
-                                        secondary_account=False,
-                                        )
-        for (idx, account_id) in enumerate(self.data_struct['*additional_accounts']):
-            (script,
-             nested_script,
-             ) = self._render__ga_js__inner(script,
-                                            nested_script,
-                                            account_id,
-                                            secondary_account=idx,
-                                            )
+        (script, nested_script) = self._render__ga_js__inner(
+            script,
+            nested_script,
+            self.data_struct["*account_id"],
+            secondary_account=False,
+        )
+        for (idx, account_id) in enumerate(self.data_struct["*additional_accounts"]):
+            (script, nested_script) = self._render__ga_js__inner(
+                script, nested_script, account_id, secondary_account=idx
+            )
 
         # close the single push if we elected
         if _single_push:
             script.append(u""",\n""".join(nested_script))
             script.append(u""");""")
 
-        script.append(u"""\
+        script.append(
+            u"""\
 (function() {
 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
 ga.src = ('https:' == document.location.protocol ? 'https://ssl': 'http://www') + '.google-analytics.com/ga.js';
 var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-})();""")
+})();"""
+        )
         script.append(u"""</script>""")
         if self.use_comments:
-            script.append('<!-- End Google Analytics -->')
+            script.append("<!-- End Google Analytics -->")
         return u"""\n""".join(script)
 
-    def _render__analytics__inner(
-        self,
-        script,
-        account_id,
-        secondary_account=False,
-    ):
+    def _render__analytics__inner(self, script, account_id, secondary_account=False):
         # precompute first
         create_args = {}
-        if self.data_struct['*crossdomain_tracking']:
-            create_args['allowLinker'] = True
-        if self.data_struct['*user_id']:
-            create_args['userId'] = self.data_struct['*user_id']
+        if self.data_struct["*crossdomain_tracking"]:
+            create_args["allowLinker"] = True
+        if self.data_struct["*user_id"]:
+            create_args["userId"] = self.data_struct["*user_id"]
         if self.amp_clientid_integration:
-            create_args['useAmpClientId'] = True
+            create_args["useAmpClientId"] = True
 
-        (secondary_account_name,
-         tracker_prefix
-         ) = generate_tracker_name(secondary_account)
+        (secondary_account_name, tracker_prefix) = generate_tracker_name(
+            secondary_account
+        )
 
         # account_id first
         # create([trackingId], [cookieDomain], [name], [fieldsObject]);
         if not create_args:
             if secondary_account_name:
-                script.append(u"""ga('create','%s','auto','%s');""" % (account_id, secondary_account_name))
+                script.append(
+                    u"""ga('create','%s','auto','%s');"""
+                    % (account_id, secondary_account_name)
+                )
             else:
                 script.append(u"""ga('create','%s','auto');""" % account_id)
         else:
             create_args = self._json_dumps(create_args)
             if secondary_account_name:
-                script.append(u"""ga('create','%s','auto','%s',%s);""" % (account_id, secondary_account_name, create_args))
+                script.append(
+                    u"""ga('create','%s','auto','%s',%s);"""
+                    % (account_id, secondary_account_name, create_args)
+                )
             else:
-                script.append(u"""ga('create','%s','auto',%s);""" % (account_id, create_args))
+                script.append(
+                    u"""ga('create','%s','auto',%s);""" % (account_id, create_args)
+                )
 
         if secondary_account is False:
             # crossdomain
-            if self.data_struct['*crossdomain_tracking']:
+            if self.data_struct["*crossdomain_tracking"]:
                 script.append(u"""ga('require','linker');""")
-                destination_domains = self.data_struct['*crossdomain_tracking']['domains']
-                destination_domains = ','.join(["'%s'" % d for d in destination_domains])
+                destination_domains = self.data_struct["*crossdomain_tracking"][
+                    "domains"
+                ]
+                destination_domains = ",".join(
+                    ["'%s'" % d for d in destination_domains]
+                )
                 script.append(u"""ga('linker:autoLink',[%s]);""" % destination_domains)
             # ecommerce
-            if self.data_struct['*transaction']:
+            if self.data_struct["*transaction"]:
                 script.append(u"""ga('require','ecommerce');""")
 
         pagehit_data = {}
         custom_data = {}
 
         # custom variables?
-        for index in sorted(self.data_struct['*custom_dimensions'].keys()):
+        for index in sorted(self.data_struct["*custom_dimensions"].keys()):
             # for `ga.js`:
             # index == str(integer)
             # payload == (name, value, opt_scope)
             # however... we only need send the VALUE, because name+opt_scope are handled on the admin dashboard
-            _payload = self.data_struct['*custom_dimensions'][index]
+            _payload = self.data_struct["*custom_dimensions"][index]
             if not _payload:
                 continue
             # remember, we stripped `dimension` out
             custom_data["dimension%s" % index] = _payload[1]  # value
-        for index in sorted(self.data_struct['*custom_metrics'].keys()):
+        for index in sorted(self.data_struct["*custom_metrics"].keys()):
             # for `ga.js`:
             # index == str(integer)
             # payload == (name, value, opt_scope)
             # however... we only need send the VALUE, because name+opt_scope are handled on the admin dashboard
-            _payload = self.data_struct['*custom_metrics'][index]
+            _payload = self.data_struct["*custom_metrics"][index]
             if not _payload:
                 continue
             # remember, we stripped `metric` out
@@ -1503,7 +1606,10 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         if self.global_custom_data:
             # update the entire tracker
             if custom_data:
-                script.append(u"""ga('%sset',%s);""" % (tracker_prefix, self._json_dumps(custom_data)))
+                script.append(
+                    u"""ga('%sset',%s);"""
+                    % (tracker_prefix, self._json_dumps(custom_data))
+                )
         else:
             # update our pagedata items
             # pagehit_data.update(custom_data)
@@ -1512,7 +1618,10 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         # pageview
         # ga('send', 'pageview');
         if pagehit_data:
-            formatted_line = u"""ga('%ssend','pageview',%s);""" % (tracker_prefix, self._json_dumps(pagehit_data))
+            formatted_line = u"""ga('%ssend','pageview',%s);""" % (
+                tracker_prefix,
+                self._json_dumps(pagehit_data),
+            )
             script.append(formatted_line)
         else:
             script.append(u"""ga('%ssend','pageview');""" % tracker_prefix)
@@ -1525,62 +1634,78 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         # # ga('ecommerce:send');
 
         # ecommerce
-        if self.data_struct['*transaction']:
-            _txn_fields_required = field_requirements['*transaction'][AnalyticsMode.ANALYTICS]['required']
+        if self.data_struct["*transaction"]:
+            _txn_fields_required = field_requirements["*transaction"][
+                AnalyticsMode.ANALYTICS
+            ]["required"]
             # _txn_fields_optional = field_requirements['*transaction'][AnalyticsMode.ANALYTICS]['optional']
-            _item_fields_required = field_requirements['*transaction_item'][AnalyticsMode.ANALYTICS]['required']
+            _item_fields_required = field_requirements["*transaction_item"][
+                AnalyticsMode.ANALYTICS
+            ]["required"]
             # _item_fields_optional = field_requirements['*transaction_item'][AnalyticsMode.ANALYTICS]['optional']
 
             # used to decide if we `send`
             _valid_transactions = False
-            for transaction_id in self.data_struct['*transaction'].keys():
-                _transaction_dict = self.data_struct['*transaction'][transaction_id]
+            for transaction_id in self.data_struct["*transaction"].keys():
+                _transaction_dict = self.data_struct["*transaction"][transaction_id]
                 try:
                     for _field in _txn_fields_required:
                         _value = _transaction_dict.get(_field, None)
                         if _value is None:
                             raise InvalidTag()
                 except Exception as e:
-                    _formatted = '/* invalid transaction */'
+                    _formatted = "/* invalid transaction */"
                     script.append(_formatted)
                     continue
 
-                _transaction_clean = source_dict_to_api_dict(_transaction_dict, '*transaction', AnalyticsMode.ANALYTICS)
-                _formatted = u"""ga('%secommerce:addTransaction',%s)""" % (tracker_prefix, self._json_dumps(_transaction_clean))
+                _transaction_clean = source_dict_to_api_dict(
+                    _transaction_dict, "*transaction", AnalyticsMode.ANALYTICS
+                )
+                _formatted = u"""ga('%secommerce:addTransaction',%s)""" % (
+                    tracker_prefix,
+                    self._json_dumps(_transaction_clean),
+                )
                 script.append(_formatted)
 
                 # enough to `send` !
                 _valid_transactions = True
 
-                if transaction_id in self.data_struct['*transaction_items']:
-                    for _item_dict in self.data_struct['*transaction_items'][transaction_id]:
+                if transaction_id in self.data_struct["*transaction_items"]:
+                    for _item_dict in self.data_struct["*transaction_items"][
+                        transaction_id
+                    ]:
                         try:
                             for _field in _item_fields_required:
                                 _value = _item_dict.get(_field, None)
                                 if _value is None:
                                     raise InvalidTag()
                         except Exception:
-                            _formatted = '/* invalid transaction item */'
+                            _formatted = "/* invalid transaction item */"
                             script.append(_formatted)
                             continue
-                        _item_clean = source_dict_to_api_dict(_item_dict, '*transaction_item', AnalyticsMode.ANALYTICS)
-                        _formatted = u"""ga('%secommerce:addItem',%s)""" % (tracker_prefix, self._json_dumps(_item_clean))
+                        _item_clean = source_dict_to_api_dict(
+                            _item_dict, "*transaction_item", AnalyticsMode.ANALYTICS
+                        )
+                        _formatted = u"""ga('%secommerce:addItem',%s)""" % (
+                            tracker_prefix,
+                            self._json_dumps(_item_clean),
+                        )
                         script.append(_formatted)
 
             if _valid_transactions:
                 script.append(u"""ga('%secommerce:send');""" % tracker_prefix)
 
         else:
-            if self.data_struct['*transaction_items']:
-                log.error('no transaction registered, but transaction_items added')
+            if self.data_struct["*transaction_items"]:
+                log.error("no transaction registered, but transaction_items added")
 
         # EVENTS
         # example: ga('send', 'event', [eventCategory], [eventAction], [eventLabel], [eventValue], [fieldsObject]);
         _events = []
-        _event_fields_required = ('*category', '*action', )
-        _event_fields_optional = ('*label', '*value', )
-        _event_fields_optional_fieldobject = (('*non_interaction', 'nonInteraction'), )
-        for _event_dict in self.data_struct['*tracked_events']:
+        _event_fields_required = ("*category", "*action")
+        _event_fields_optional = ("*label", "*value")
+        _event_fields_optional_fieldobject = (("*non_interaction", "nonInteraction"),)
+        for _event_dict in self.data_struct["*tracked_events"]:
             _event_args = []
             _event_args_optional = []
             _event_fieldobject = {}
@@ -1611,22 +1736,26 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
                     # upgrade `None` to `"undefined"`, other items are strings
                     for _idx, _value in enumerate(_event_args_optional):
                         if _value is None:
-                            _value = 'undefined'  # it's undefined(js keyword)
+                            _value = "undefined"  # it's undefined(js keyword)
                         else:
                             if type(_value) in (int, float):
                                 _value = "%s" % _value  # turn it into a string
                             elif type(_value) is bool:
-                                _value = ("%s" % _value).lower()  # turn it into a string
+                                _value = (
+                                    "%s" % _value
+                                ).lower()  # turn it into a string
                             else:
                                 _value = "'%s'" % _value  # pop it in a quote
                         _event_args_optional[_idx] = _value
                     # remove every 'undefined' from the tail of the list
                     _max_defined = None
                     for _idx, value in enumerate(_event_args_optional):
-                        if _value != 'undefined':
+                        if _value != "undefined":
                             _max_defined = _idx
                     if _max_defined is not None:
-                        _event_args_optional = _event_args_optional[:(_max_defined + 1)]
+                        _event_args_optional = _event_args_optional[
+                            : (_max_defined + 1)
+                        ]
                     else:
                         _event_args_optional = []
             # figure out the fieldobject args if any.
@@ -1641,12 +1770,17 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
             _event_args_all = _event_args + _event_args_optional
             if _event_fieldobject:
                 _event_args_all.append(self._json_dumps(_event_fieldobject))
-            _events.append(u"""ga('%ssend','event',%s);""" % (tracker_prefix, ','.join(_event_args_all)))
+            _events.append(
+                u"""ga('%ssend','event',%s);"""
+                % (tracker_prefix, ",".join(_event_args_all))
+            )
 
         if _events:
             for _event in _events:
                 if _event is INVALID_TAG:
-                    script.append("/* ga('%ssend': incompatible event */" % tracker_prefix)
+                    script.append(
+                        "/* ga('%ssend': incompatible event */" % tracker_prefix
+                    )
                 else:
                     script.append(_event)
 
@@ -1657,27 +1791,27 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         if self.use_comments:
             script.append(u"""<!-- Google Analytics -->""")
         script.append(u"""<script type="text/javascript">""")
-        script.append(u"""\
+        script.append(
+            u"""\
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
 (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
 m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');""")
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');"""
+        )
 
-        account_id = self.data_struct['*account_id']
-        script = self._render__analytics__inner(script,
-                                                account_id,
-                                                secondary_account=False,
-                                                )
+        account_id = self.data_struct["*account_id"]
+        script = self._render__analytics__inner(
+            script, account_id, secondary_account=False
+        )
 
-        for (idx, account_id) in enumerate(self.data_struct['*additional_accounts']):
-            script = self._render__analytics__inner(script,
-                                                    account_id,
-                                                    secondary_account=idx,
-                                                    )
+        for (idx, account_id) in enumerate(self.data_struct["*additional_accounts"]):
+            script = self._render__analytics__inner(
+                script, account_id, secondary_account=idx
+            )
 
         script.append(u"""</script>""")
         if self.use_comments:
-            script.append('<!-- End Google Analytics -->')
+            script.append("<!-- End Google Analytics -->")
         return u"""\n""".join(script)
 
     def _render__gtag(self):
@@ -1685,41 +1819,46 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         migration guide: https://developers.google.com/analytics/devguides/collection/djs/migration
         """
         script = []
-        account_id = self.data_struct['*account_id']
+        account_id = self.data_struct["*account_id"]
         if self.use_comments:
             # script.append(u"""<!-- Google Analytics -->""")
             script.append(u"""<!-- Global site tag (gtag.js) - Google Analytics -->""")
-        script.append(u"""\
+        script.append(
+            u"""\
 <script async src="https://www.googletagmanager.com/gtag/js?id=%(account_id)s"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-""" % {'account_id': account_id})
+"""
+            % {"account_id": account_id}
+        )
 
         # initial config args
         create_args = {}
         if self.amp_clientid_integration:
-            create_args['use_amp_client_id'] = True
-        if self.data_struct['*crossdomain_tracking']:
-            create_args['linker'] = {}
-            if self.data_struct['*crossdomain_tracking']['accept_incoming']:
-                create_args['linker']['accept_incoming'] = True
-            create_args['linker']['domains'] = self.data_struct['*crossdomain_tracking']['domains']
+            create_args["use_amp_client_id"] = True
+        if self.data_struct["*crossdomain_tracking"]:
+            create_args["linker"] = {}
+            if self.data_struct["*crossdomain_tracking"]["accept_incoming"]:
+                create_args["linker"]["accept_incoming"] = True
+            create_args["linker"]["domains"] = self.data_struct[
+                "*crossdomain_tracking"
+            ]["domains"]
 
-        if self.data_struct['*user_id']:
-            create_args['user_id'] = self.data_struct['*user_id']
+        if self.data_struct["*user_id"]:
+            create_args["user_id"] = self.data_struct["*user_id"]
         jsons_custom_values = None
-        if self.data_struct['*custom_dimensions']:
+        if self.data_struct["*custom_dimensions"]:
             # this will be: 'dimension%s' = name
             custom_map = {}
             # this will be: name = value
             custom_values = {}
-            for index in sorted(self.data_struct['*custom_dimensions'].keys()):
-                _payload = self.data_struct['*custom_dimensions'][index]
-                custom_map['dimension%s' % index] = _payload[0]
+            for index in sorted(self.data_struct["*custom_dimensions"].keys()):
+                _payload = self.data_struct["*custom_dimensions"][index]
+                custom_map["dimension%s" % index] = _payload[0]
                 custom_values[_payload[0]] = _payload[1]
-            create_args['custom_map'] = custom_map
+            create_args["custom_map"] = custom_map
             jsons_custom_values = self._json_dumps(custom_values)
 
         if jsons_custom_values:
@@ -1727,19 +1866,32 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             if self.gtag_dimensions_strategy == GtagDimensionsStrategy.SET_CONFIG:
                 if self.global_custom_data:
                     script.append("""gtag('set',%s);""" % jsons_custom_values)
-            elif self.gtag_dimensions_strategy == GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT:
-                create_args['send_page_view'] = False
+            elif (
+                self.gtag_dimensions_strategy
+                == GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT
+            ):
+                create_args["send_page_view"] = False
 
         # set the main account_id config
         if not create_args:
             script.append("""gtag('config','%s');""" % account_id)
-            for (idx, alt_account_id) in enumerate(self.data_struct['*additional_accounts']):
-                script.append("""gtag('config','%s');""" % alt_account_id)  # ,{'groups':'core'}
+            for (idx, alt_account_id) in enumerate(
+                self.data_struct["*additional_accounts"]
+            ):
+                script.append(
+                    """gtag('config','%s');""" % alt_account_id
+                )  # ,{'groups':'core'}
         else:
             jsons_create_args = self._json_dumps(create_args)
-            script.append("""gtag('config','%s',%s);""" % (account_id, jsons_create_args))
-            for (idx, alt_account_id) in enumerate(self.data_struct['*additional_accounts']):
-                script.append("""gtag('config','%s',%s);""" % (alt_account_id, jsons_create_args))  # ,{'groups':'core'}
+            script.append(
+                """gtag('config','%s',%s);""" % (account_id, jsons_create_args)
+            )
+            for (idx, alt_account_id) in enumerate(
+                self.data_struct["*additional_accounts"]
+            ):
+                script.append(
+                    """gtag('config','%s',%s);""" % (alt_account_id, jsons_create_args)
+                )  # ,{'groups':'core'}
 
         # if we have custom_variables, they're done via a config update + event
         if jsons_custom_values:
@@ -1747,21 +1899,32 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
                 if self.global_custom_data:
                     pass
                 else:
-                    script.append("""gtag('event','pageview',%s);""" % jsons_custom_values)
-            elif self.gtag_dimensions_strategy == GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT:
+                    script.append(
+                        """gtag('event','pageview',%s);""" % jsons_custom_values
+                    )
+            elif (
+                self.gtag_dimensions_strategy
+                == GtagDimensionsStrategy.CONFIGNOPAGEVIEW_SET_EVENT
+            ):
                 if self.global_custom_data:
                     if jsons_custom_values:
                         script.append("""gtag('set',%s);""" % jsons_custom_values)
                     # the gtag() event automatically tracks a pageview, which we disabled, so this must be sent in an event of `pageview`
                     script.append("""gtag('event','pageview');""")
                 else:
-                    script.append("""gtag('event','pageview',%s);""" % jsons_custom_values)
+                    script.append(
+                        """gtag('event','pageview',%s);""" % jsons_custom_values
+                    )
 
         # ecommerce
-        if self.data_struct['*transaction']:
-            _txn_fields_required = field_requirements['*transaction'][AnalyticsMode.GTAG]['required']
+        if self.data_struct["*transaction"]:
+            _txn_fields_required = field_requirements["*transaction"][
+                AnalyticsMode.GTAG
+            ]["required"]
             # _txn_fields_optional = field_requirements['*transaction'][AnalyticsMode.GTAG]['optional']
-            _item_fields_required = field_requirements['*transaction_item'][AnalyticsMode.GTAG]['required']
+            _item_fields_required = field_requirements["*transaction_item"][
+                AnalyticsMode.GTAG
+            ]["required"]
             # _item_fields_optional = field_requirements['*transaction_item'][AnalyticsMode.GTAG]['optional']
 
             # used to decide if we `send`
@@ -1770,42 +1933,50 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             # consolidated error logging
             _errors = []
 
-            for transaction_id in self.data_struct['*transaction'].keys():
-                _transaction_dict = self.data_struct['*transaction'][transaction_id]
+            for transaction_id in self.data_struct["*transaction"].keys():
+                _transaction_dict = self.data_struct["*transaction"][transaction_id]
                 try:
                     for _field in _txn_fields_required:
                         _value = _transaction_dict.get(_field, None)
                         if _value is None:
                             raise InvalidTag()
                 except Exception as e:
-                    _formatted = '/* invalid transaction */'
+                    _formatted = "/* invalid transaction */"
                     _errors.append(_formatted)
                     continue
 
-                _transaction_clean = source_dict_to_api_dict(_transaction_dict, '*transaction', AnalyticsMode.GTAG)
+                _transaction_clean = source_dict_to_api_dict(
+                    _transaction_dict, "*transaction", AnalyticsMode.GTAG
+                )
 
                 # enough to `send` !
                 _valid_transactions = True
 
                 # now we do items
                 items = []
-                if transaction_id in self.data_struct['*transaction_items']:
-                    for _item_dict in self.data_struct['*transaction_items'][transaction_id]:
+                if transaction_id in self.data_struct["*transaction_items"]:
+                    for _item_dict in self.data_struct["*transaction_items"][
+                        transaction_id
+                    ]:
                         try:
                             for _field in _item_fields_required:
                                 _value = _item_dict.get(_field, None)
                                 if _value is None:
                                     raise InvalidTag()
                         except Exception:
-                            _formatted = '/* invalid transaction item */'
+                            _formatted = "/* invalid transaction item */"
                             _errors.append(_formatted)
                             continue
-                        _item_clean = source_dict_to_api_dict(_item_dict, '*transaction_item', AnalyticsMode.GTAG)
+                        _item_clean = source_dict_to_api_dict(
+                            _item_dict, "*transaction_item", AnalyticsMode.GTAG
+                        )
                         items.append(_item_clean)
 
-                _transaction_clean['items'] = items
+                _transaction_clean["items"] = items
 
-                _formatted = u"""gtag('event', 'purchase', %s""" % self._json_dumps(_transaction_clean)
+                _formatted = u"""gtag('event', 'purchase', %s""" % self._json_dumps(
+                    _transaction_clean
+                )
                 script.append(_formatted)
 
             if _valid_transactions:
@@ -1820,14 +1991,15 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         # events
         # ga('send', 'event', 'category', 'action', 'opt_label', opt_value, {'nonInteraction': 1});
         _events = []
-        _event_fields_optional_fieldobject = (('*category', 'event_category'),
-                                              ('*label', 'event_label'),
-                                              ('*value', 'value'),
-                                              ('*non_interaction', 'non_interaction'),  # TODO: is this legit?
-                                              )
-        for _event_dict in self.data_struct['*tracked_events']:
+        _event_fields_optional_fieldobject = (
+            ("*category", "event_category"),
+            ("*label", "event_label"),
+            ("*value", "value"),
+            ("*non_interaction", "non_interaction"),  # TODO: is this legit?
+        )
+        for _event_dict in self.data_struct["*tracked_events"]:
             # all events require an action
-            _event_action = _event_dict.get('*action')
+            _event_action = _event_dict.get("*action")
             try:
                 if not _event_action:
                     raise InvalidTag()
@@ -1847,7 +2019,10 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
                     _event_fieldobject[_field_dest] = _value
 
             if _event_fieldobject:
-                _formatted = u"""gtag('event','%s',%s""" % (_event_action, self._json_dumps(_event_fieldobject))
+                _formatted = u"""gtag('event','%s',%s""" % (
+                    _event_action,
+                    self._json_dumps(_event_fieldobject),
+                )
                 _events.append(_formatted)
             else:
                 _formatted = u"""gtag('event','%s');""" % _event_action
@@ -1862,42 +2037,38 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 
         script.append(u"""</script>""")
         if self.use_comments:
-            script.append('<!-- End Google Analytics -->')
+            script.append("<!-- End Google Analytics -->")
         return u"""\n""".join(script)
 
     def _render__amp(self):
-        script = ['<amp-analytics type="googleanalytics">',
-                  '<script type="application/json">',
-                  ]
-        payload = {'vars': {'account': self.data_struct['*account_id'],
-                            },
-                   'triggers': {'trackPageview': {'on': 'visible',
-                                                  'request': 'pageview',
-                                                  },
-                                },
-                    }
+        script = [
+            '<amp-analytics type="googleanalytics">',
+            '<script type="application/json">',
+        ]
+        payload = {
+            "vars": {"account": self.data_struct["*account_id"]},
+            "triggers": {"trackPageview": {"on": "visible", "request": "pageview"}},
+        }
 
         # these are optional
         extra_url_params = {}
-        if self.data_struct['*user_id']:
-            extra_url_params['user_id'] = self.data_struct['*user_id']
+        if self.data_struct["*user_id"]:
+            extra_url_params["user_id"] = self.data_struct["*user_id"]
 
-        if self.data_struct['*custom_dimensions']:
-            for _key, _dimension in self.data_struct['*custom_dimensions'].items():
+        if self.data_struct["*custom_dimensions"]:
+            for _key, _dimension in self.data_struct["*custom_dimensions"].items():
                 # _dimension = ('name', 'value', True/False/None)
-                extra_url_params['cd%s' % _key] = _dimension[1]
+                extra_url_params["cd%s" % _key] = _dimension[1]
 
         # cleanup this
         if extra_url_params:
-            payload['extraUrlParams'] = extra_url_params
+            payload["extraUrlParams"] = extra_url_params
         script.append(self._json_dumps(payload))
 
-        script.extend(['</script>',
-                       '</amp-analytics>',
-                       ])
+        script.extend(["</script>", "</amp-analytics>"])
         if self.use_comments:
             script.insert(0, u"""<!-- Google Analytics -->""")
-            script.append('<!-- End Google Analytics -->')
+            script.append("<!-- End Google Analytics -->")
         return u"""\n""".join(script)
 
     def render(self, mode=None):
@@ -1923,7 +2094,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             return self._render__gtag()
         elif mode == AnalyticsMode.AMP:
             return self._render__amp()
-        return '<!-- unsupported AnalyticsMode -->'
+        return "<!-- unsupported AnalyticsMode -->"
 
     def render_head(self, mode=None):
         """
@@ -1936,11 +2107,10 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             if self.amp_clientid_integration:
                 return """<meta name="amp-google-client-id-api" content="googleanalytics">\n<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>"""
             return """<script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>"""
-        return ''  # no head
+        return ""  # no head
+
 
 # ==============================================================================
 
 
-__all__ = ('AnalyticsWriter',
-           'AnalyticsMode',
-           )
+__all__ = ("AnalyticsWriter", "AnalyticsMode")

@@ -433,8 +433,7 @@ class AnalyticsWriter(object):
         self.data_struct["*account_id"] = account_id
 
     def set_account_additional__add(self, account_id):
-        """add an additional account id to send the data to.  please note - this is only tested to work with the async method.
-        """
+        """add an additional account id to send the data to.  please note - this is only tested to work with the async method."""
         if account_id not in self.data_struct["*additional_accounts"]:
             self.data_struct["*additional_accounts"].append(account_id)
 
@@ -963,18 +962,18 @@ class AnalyticsWriter(object):
 
         Product and promotion actions
         --------------------------------+---------------------------------------
-        analytics.js field	            |   gtag.js event
+        analytics.js field              |   gtag.js event
         --------------------------------+---------------------------------------
-        add	                            |   add_to_cart
-        checkout (first step)	        |   begin_checkout
-        checkout (any subsequent step)	|   checkout_progress
-        checkout_option	                |   set_checkout_option
-        click		                    |   select_content (without promotions)
-        detail	                	    |   view_item
-        promo_click	                	|   select_content (with promotions)
-        purchase		                |   purchase
-        refund		                    |   refund
-        remove		                    |   remove_from_cart
+        add                             |   add_to_cart
+        checkout (first step)           |   begin_checkout
+        checkout (any subsequent step)  |   checkout_progress
+        checkout_option                 |   set_checkout_option
+        click                           |   select_content (without promotions)
+        detail                          |   view_item
+        promo_click                     |   select_content (with promotions)
+        purchase                        |   purchase
+        refund                          |   refund
+        remove                          |   remove_from_cart
         --------------------------------+---------------------------------------
         """
         # stash this into a dict

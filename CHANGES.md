@@ -1,3 +1,7 @@
+unreleased
+	* upgraded black
+	* integrated with pre-commit
+
 0.3.2
 	2019.09.19
 	* black formatting

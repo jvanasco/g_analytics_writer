@@ -627,8 +627,8 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 </script>
 <!-- End Google Analytics -->"""
     data__test_crossdomain__html_multi = (
-        data__test_crossdomain__html
-    )  # this doesn't support it the same way
+        data__test_crossdomain__html  # this doesn't support it the same way
+    )
     data__test_crossdomain__html_link_attrs = '''onclick="_gaq.push(['_link','https://example.com/foo.html']); return false;"'''
     data__test_custom_variables__html = """\
 <!-- Google Analytics -->
@@ -783,8 +783,8 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
         ),
     )
     data__test_amp_clientid_integration = (
-        data__test_pageview__html
-    )  # not sure this functionality is possible under ga.js
+        data__test_pageview__html  # not sure this functionality is possible under ga.js
+    )
     data__test_amp_clientid_integration_head = {True: "", False: ""}
 
 

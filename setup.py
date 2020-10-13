@@ -24,7 +24,9 @@ requires = [
     "metadata_utils>=0.1.0",
     "six",
 ]
-tests_require = []
+tests_require = [
+    "pyramid",
+]
 testing_extras = tests_require + [
     "pytest",
 ]

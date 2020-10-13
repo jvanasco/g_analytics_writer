@@ -1,4 +1,5 @@
 0.4.0
+	2020.10.13
 	* breaking change: 
 		changed kwarg `async` to `render_async`, because `async` is a python3 keyword
 	* upgraded black

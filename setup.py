@@ -18,9 +18,17 @@ except:
 with open(
     os.path.join(os.path.dirname(__file__), "g_analytics_writer", "__init__.py")
 ) as v_file:
-    VERSION = re.compile(r".*__VERSION__ = '(.*?)'", re.S).match(v_file.read()).group(1)
+    VERSION = re.compile(r'.*__VERSION__ = "(.*?)"', re.S).match(v_file.read()).group(1)
 
-requires = ["metadata_utils>=0.1.0", "six"]
+requires = [
+    "metadata_utils>=0.1.0",
+    "six",
+]
+tests_require = []
+testing_extras = tests_require + [
+    "pytest",
+]
+
 
 setup(
     name="g_analytics_writer",
@@ -31,6 +39,7 @@ setup(
         "Intended Audience :: Developers",
         "Framework :: Pyramid",
         "Programming Language :: Python",
+        "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
     ],
@@ -42,7 +51,10 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-    tests_require=requires,
     install_requires=requires,
+    tests_require=tests_require,
+    extras_require={
+        "testing": testing_extras,
+    },
     test_suite="g_analytics_writer.tests",
 )

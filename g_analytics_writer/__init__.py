@@ -1785,7 +1785,7 @@ var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga
 
         return script
 
-    def _render__analytics(self, async=None):
+    def _render__analytics(self, render_async=None):
         script = []
         if self.use_comments:
             script.append(u"""<!-- Google Analytics -->""")
@@ -2088,7 +2088,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         if mode == AnalyticsMode.GA_JS:
             return self._render__ga_js()
         elif mode == AnalyticsMode.ANALYTICS:
-            return self._render__analytics(async=True)
+            return self._render__analytics(render_async=True)
         elif mode == AnalyticsMode.GTAG:
             return self._render__gtag()
         elif mode == AnalyticsMode.AMP:

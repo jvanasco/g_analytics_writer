@@ -1,6 +1,9 @@
-unreleased
+0.4.0
+	* breaking change: 
+		changed kwarg `async` to `render_async`, because `async` is a python3 keyword
 	* upgraded black
 	* integrated with pre-commit
+	* tox and github testing
 
 0.3.2
 	2019.09.19

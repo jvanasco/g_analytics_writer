@@ -7,12 +7,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
-README = ""
-try:
-    README = open(os.path.join(here, "README.md")).read()
-    README = README.split("\n\n", 1)[0] + "\n"
-except:
-    pass
+README = open(os.path.join(here, "README.rst")).read()
 
 # store version in the init.py
 with open(

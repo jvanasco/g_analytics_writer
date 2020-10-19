@@ -1,20 +1,22 @@
+# stdlib
+import unittest
+
+# local package to test
 import g_analytics_writer
 import g_analytics_writer.pyramid_integration
-
 from g_analytics_writer import AnalyticsWriter
 from g_analytics_writer import GtagDimensionsStrategy
-
-# core testing facility
-import unittest
 
 # pyramid testing requirements
 from pyramid import testing
 from pyramid.interfaces import IRequestExtensions
-
-
-# testing needs
 from webob.multidict import MultiDict
+
+# local test utilities
 from ._utils import custom_json_dumps_sorted
+
+
+# ==============================================================================
 
 
 class _TestHarness(object):

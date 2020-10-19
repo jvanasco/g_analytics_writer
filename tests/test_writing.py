@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import pdb
 
 """
 NOTE FOR TESTS
@@ -11,32 +10,33 @@ it stays with a u prefix for Python3
 
 note that we strings are still prefixed with `u` for Python2
 """
+# stdlib
+import os
+import re
+import unittest
 
-
+# local package to test
 import g_analytics_writer
 from g_analytics_writer import AnalyticsWriter
 from g_analytics_writer import AnalyticsMode
 from g_analytics_writer import GtagDimensionsStrategy
 
-# import g_analytics_writer.pyramid_integration
-
-# core testing facility
-import unittest
-import re
-import os
+# local test utilities
 from ._utils import custom_json_dumps_sorted
-
-# regexes to test against
-re_refresh_15 = re.compile('<meta http-equiv="refresh" content="15"/>')
-re_other_charset = re.compile('<meta charset="utf8"/>')
 
 # used for writing tests
 # export g_analytics_writer_debug=1
 # export g_analytics_writer_debug=0
 PRINT_RENDERS = bool(int(os.environ.get("g_analytics_writer_debug", 0)))
 
-# pyramid testing requirements
-# from pyramid import testing
+# ==============================================================================
+
+# regexes to test against
+re_refresh_15 = re.compile('<meta http-equiv="refresh" content="15"/>')
+re_other_charset = re.compile('<meta charset="utf8"/>')
+
+
+# ==============================================================================
 
 
 class CoreTests(object):

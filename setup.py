@@ -26,6 +26,7 @@ requires = [
 ]
 tests_require = [
     "pyramid",
+    "webob",  # should be installed by pyramid
 ]
 testing_extras = tests_require + [
     "pytest",
@@ -58,5 +59,5 @@ setup(
     extras_require={
         "testing": testing_extras,
     },
-    test_suite="g_analytics_writer.tests",
+    test_suite="tests",
 )

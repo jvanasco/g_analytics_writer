@@ -1,4 +1,10 @@
-g_analytics_writer gives lightweight support for writing optimized "Google Analytics" tracking code for those times when you need to use The Great Satan, even though you would prefer not to.
+g_analytics_writer
+==================
+
+Build Status: ![Python package](https://github.com/jvanasco/g_analytics_writer/workflows/Python%20package/badge.svg)
+
+
+`g_analytics_writer` gives lightweight support for writing optimized "Google Analytics" tracking code for those times when you need to use The Great Satan, even though you would prefer not to.
 
 Python2.7 and Python3.5+ are supported
 
@@ -37,7 +43,8 @@ This package lets you set Google code wherever needed, and renders everything in
 
 Every command has extensive docstrings, which also include, credit, and link to the relevant sections of the official GoogleAnalytics API docs.
 
-# Supported Concepts & Commands
+Supported Concepts & Commands
+=============================
 
 * Core
 * SetAccount and reporting into multiple domains
@@ -49,29 +56,35 @@ Every command has extensive docstrings, which also include, credit, and link to 
 * AMP client_id integration
 
 
-# what's the difference between all these tracking versions?
+what's the difference between all these tracking versions?
+==========================================================
 
 There are a few big differences:
 
-## custom variables
+custom variables
+----------------
 
 1. The legacy `ga.js` did not require pre-configuring the admin(online) dashboard with custom dimensions. everything was configured on the tag, from the 'name' to the 'scope'.  sending data to their servers was in the form of: `_gaq.push(['_setCustomVar',1,'pagetype','account']);`.
 2. The `analytics.js` version requires the dashboard to be pre-configured with custom dimensions. Note the form of  `ga('send','pageview',{"dimension1":"account"})` does not include the `pagetype` label, only the value `account`.
 3. The `gat.js` version requires the dashboard to be pre-configured with custom dimensions and also requires a `custom_map`. Note the form of  `gtag('set',{"section":"account","pagetype":"home","is_known_user":"1"}); gtag('config','UA-12345678987654321-12',{"custom_map":{"dimension1":"section","dimension2":"pagetype","dimension5":"is_known_user"}});` sets the `pagetype` label,however that is not transmitted to their server - it is only used locally for translation.
 4. AMP uses the `gat.js` concepts
 
-## order of execution and automatic pageviews
+order of execution and automatic pageviews
+------------------------------------------
 
 1. `ga.js` requires a manual `_trackPageview`, so it is easy to populate the pageview with custom variables.
 2. `analytics.js` requires a manual `'send','pageview'`, so it is easy to populate the pageview with custom variables.
-2. `gtag.js` automates `'send','pageview'`. in order to populate the pageview with custom variables, we must either pre-populate the tracker with global variables OR disable the initial pageview and send a `pageview` "event" to their servers.
+3. `gtag.js` automates `'send','pageview'`. in order to populate the pageview with custom variables, we must either pre-populate the tracker with global variables OR disable the initial pageview and send a `pageview` "event" to their servers.
 
-## and more
+
+and more
+--------
 
 transactions and events are all slightly different across versions
 
 
-# History
+History
+=======
 
 this package replaces the following packages,
 
@@ -84,9 +97,29 @@ this package replaces the following packages,
         * pylons_gaq  - https://github.com/jvanasco/pylons_gaq | pylons support was ended in the 0.2.0 release
 
 
-# QuickStart
+AVAILABLE MODES
+===============
 
-## create a new AnalyticsWriter object and do stuff with it
+The available modes are:
+
+.. code-block:: python
+
+    AnalyticsMode.GA_JS = "legacy `ga.js`"
+    AnalyticsMode.ANALYTICS = "current/deprecated `analytics.js`"
+    AnalyticsMode.GTAG = "current/future `gtag.js`"
+    AnalyticsMode.AMP = "AMP plugin support, is a variant of `gtag.js`"
+
+The default is currently `AnalyticsMode.ANALYTICS`, which has the smallest amount of network traffic.
+
+`AnalyticsMode.GTAG` has slightly larger network traffic, because the `gtag.js` file actually loads and interacts with the `analytics.js` file.
+
+
+QuickStart - General
+====================
+
+Create a new AnalyticsWriter object and do stuff with it:
+
+.. code-block:: python
 
     from g_analytics_writer import AnalyticsWriter
 
@@ -97,67 +130,74 @@ this package replaces the following packages,
 that's really about it
 
 
-# AVAILABLE MODES
+QuickStart - Pyramid
+====================
 
-The available modes are:
+The `Pyramid` helpers simply manage a `AnalyticsWriter` object in the request.gaq namespace
 
-    AnalyticsMode.GA_JS - legacy `ga.js`
-    AnalyticsMode.ANALYTICS - current/deprecated `analytics.js`
-    AnalyticsMode.GTAG - current/future `gtag.js`
-    AnalyticsMode.AMP - amp plugin support, is a variant of `gtag.js`
+environment.ini - required
 
-The default is currently `AnalyticsMode.ANALYTICS`, which has the smallest amount of network traffic.
+.. code-block:: python
 
-`AnalyticsMode.GTAG` has slightly larger network traffic, because the `gtag.js` file actually loads and interacts with the `analytics.js` file.
+	g_analytics_writer.account_id = UA-123412341234-1234
 
-
-# QuickStart - Pyramid
-
-the `Pyramid` helpers simply manage a `AnalyticsWriter` object in the request.gaq namespace
-
-    environment.ini - required
-
-        g_analytics_writer.account_id = UA-123412341234-1234
-
-    environment.ini - optional
+environment.ini - optional
     
-        g_analytics_writer.mode = <INT references AnalyticsMode>
-        g_analytics_writer.use_comments = <BOOLEAN>
-        g_analytics_writer.single_push = <BOOLEAN only for ga.js>
-        g_analytics_writer.force_ssl = <BOOLEAN>
-        g_analytics_writer.global_custom_data = <BOOLEAN>
-        g_analytics_writer.gtag_dimensions_strategy = <BOOLEAN>
-        g_analytics_writer.amp_clientid_integration = <BOOLEAN>
+.. code-block:: python
 
-    this way you can have different reporting environments...
+	g_analytics_writer.mode = <INT references AnalyticsMode>
+	g_analytics_writer.use_comments = <BOOLEAN>
+	g_analytics_writer.single_push = <BOOLEAN only for ga.js>
+	g_analytics_writer.force_ssl = <BOOLEAN>
+	g_analytics_writer.global_custom_data = <BOOLEAN>
+	g_analytics_writer.gtag_dimensions_strategy = <BOOLEAN>
+	g_analytics_writer.amp_clientid_integration = <BOOLEAN>
 
-        dev.ini
-            g_analytics_writer.account_id_ = U-123449-2
+This way you can have different reporting environments.
 
-        production.ini
-            g_analytics_writer.account_id_ = U-123449-1
+For example, `dev.ini` may define a secondary account
+
+.. code-block:: python
+
+	g_analytics_writer.account_id_ = U-123449-2
+
+wile `production.ini` defines your primary account
+
+.. code-block:: python
+
+	g_analytics_writer.account_id_ = U-123449-1
 
 
-    __init__.py:
+You simply include the package in your `__init__.py`
 
-        def main(global_config, **settings):
-            ...
-            # custom gaq
-            config.include("g_analytics_writer.pyramid_integration")
+.. code-block:: python
+
+	def main(global_config, **settings):
+		...
+		# custom gaq
+		config.include("g_analytics_writer.pyramid_integration")
 
 
-## When you want to set a custom variable , or anything similar...
+When you want to set a custom variable , or anything similar...
+---------------------------------------------------------------
+
+.. code-block:: python
 
     request.analytics_writer.setCustomVar(1, 'TemplateVersion', 'A', 3)
 
 
-## Rendering Optimized Variables
+Rendering Optimized Variables
+-----------------------------
 
 For `analytics.js` the recommended configuration option is:
+
+.. code-block:: python
 
     `global_custom_data=True`
 
 This will issue a global `set` for all trackers before the `pageview`
+
+.. code-block:: javascript
 
     ga('create','UA-123123-1','auto');
     ga('set',{"dimension9":"jonathan"});
@@ -165,22 +205,31 @@ This will issue a global `set` for all trackers before the `pageview`
 
 For `gtag.js` the recommended configuration option is:
 
+.. code-block:: python
+
     `global_custom_data=True`
 
 This will issue a global `set` *BEFORE* issuing the config, which will automatically trigger pageviews
+
+.. code-block:: javascript
 
     gtag('set',{"name":"jonathan"});
     gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"}});
 
 Toggling configurations can generate this:
 
+.. code-block:: javascript
+
     gtag('config','UA-123123-1',{"custom_map":{"dimension9":"name"},"send_page_view":false});
     gtag('set',{"name":"jonathan"});
     gtag('event','pageview');
 
-## To print this out..
+To print this out...
+--------------------
 
 In my mako templates, I just have this...
+
+.. code-block:: html
 
     <head>
     ...
@@ -191,7 +240,8 @@ In my mako templates, I just have this...
 Notice that you have to escape under Mako.   For more information on mako escape options - http://www.makotemplates.org/docs/filtering.html
 
 
-## Licensing
+Licensing
+---------
 
 This package is made available via the MIT License -- http://www.opensource.org/licenses/mit-license
 

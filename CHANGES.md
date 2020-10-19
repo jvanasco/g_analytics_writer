@@ -1,3 +1,8 @@
+0.4.1
+	2020.10.19
+	packaging fix
+
+
 0.4.0
 	2020.10.13
 	* breaking change: 

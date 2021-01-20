@@ -6,13 +6,13 @@ import re
 from setuptools import setup
 from setuptools import find_packages
 
-here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, "README.rst")).read()
+HERE = os.path.abspath(os.path.dirname(__file__))
+long_description = description = "Lightweight Google Analytics support"
+with open(os.path.join(HERE, "README.rst")) as fp:
+    long_description = fp.read()
 
 # store version in the init.py
-with open(
-    os.path.join(os.path.dirname(__file__), "g_analytics_writer", "__init__.py")
-) as v_file:
+with open(os.path.join(HERE, "g_analytics_writer", "__init__.py")) as v_file:
     VERSION = re.compile(r'.*__VERSION__ = "(.*?)"', re.S).match(v_file.read()).group(1)
 
 requires = [
@@ -31,8 +31,8 @@ testing_extras = tests_require + [
 setup(
     name="g_analytics_writer",
     version=VERSION,
-    description="Lightweight Google Analytics support",
-    long_description=README,
+    description=description,
+    long_description=long_description,
     classifiers=[
         "Intended Audience :: Developers",
         "Framework :: Pyramid",
